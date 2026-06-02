@@ -117,17 +117,19 @@ reading bytes (idx 14–17 and 26).
 | 5–11 | *settings* | mixed | limits / hysteresis / start-delay / calibration |
 | 12 | `unit` | uint8 | `1` = °C · `2` = °F |
 | 13 | *settings* | uint8 | (`00` observed) |
-| **14–17** | *dynamic* | mixed | inserted readings (battery-ish / fridge current temp + tenths) |
-| 16 | `fridge_current` | int8 | fridge current temp (°C) — best-effort offset |
+| **14–17** | *dynamic* | mixed | inserted readings; idx 16/17 = fridge current temp (whole + tenths) |
+| 16–17 | `fridge_current` | int8 + u8 | fridge current temp = `idx16 + idx17/10` °C (e.g. `0d 04` = 13.4°C) |
 | **18** | **`freezer_target`** | int8 | freezer setpoint (set by `06`), in displayed unit |
 | 19–25 | *settings* | mixed | freezer-side limits / calibration |
-| **26** | `freezer_current` | int8 | freezer current temp — best-effort offset |
-| 27–29 | *settings* | mixed | tail (`00 03 00` observed) |
+| **26–27** | `freezer_current` | int8 + u8 | freezer current temp = `idx26 + idx27/10` °C |
+| 28–29 | *settings* | mixed | tail (`03 00` observed) |
 
-> Confirmed by replaying the capture: `parseStatus` of the real notification yields
-> `fridge_target`, `freezer_target`, `unit` and the lock/power/run/batt flags exactly as the
-> official app showed them. The `fridge_current`/`freezer_current` offsets (16 & 26) are the
-> only soft spots — verify with **Diagnostics → Snapshot** if needed.
+> **Confirmed on real hardware** (live session on the `A1-FFFF…` 50 L): replaying the status
+> stream, `idx16/17` held steady at the fridge temp while `idx26/27` dropped on its own as the
+> freezer cooled — and a cross-check against an earlier capture showed a clean `12.9 → 13.0`
+> tenths step. Both current temps are reported in **°C** regardless of the display unit, so the
+> app converts them when °F is selected. Setpoints, unit and the lock/power/run/batt flags all
+> matched the official app exactly.
 
 ---
 

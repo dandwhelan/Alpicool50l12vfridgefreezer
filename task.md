@@ -21,7 +21,8 @@
 - [x] Confirmed it's **dual-zone**: fridge target via `05`, freezer target via `06`
 - [x] Confirmed `02` settings-block layout (25 bytes; dynamic readings interleaved) + °C/°F idx 12
 - [x] Fixed connect/sync: 30-byte status gate (was off-by-one `31`), no auto-bind, 20-byte write chunking
-- [ ] Confirm current-temp offsets (status idx 16 & 26) on hardware via Snapshot
+- [x] **Validated on the physical 50 L** — connect, fridge/freezer temp set, power toggle all confirmed working
+- [x] Confirmed current-temp offsets on hardware: fridge `idx16/17`, freezer `idx26/27` (whole + tenths, °C)
 
 **Power (needs the Fossibot):**
 - [ ] Confirm connect + live telemetry (SoC, watts, time)

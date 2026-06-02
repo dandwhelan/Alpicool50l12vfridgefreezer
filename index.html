@@ -436,9 +436,14 @@ const Fridge = (()=>{
       st.unit = p[12]===2?'F':'C';
       st.L_target  = s8(p[4]);   // fridge setpoint (cmd 0x05) — in the displayed unit
       st.R_target  = s8(p[18]);  // freezer setpoint (cmd 0x06) — in the displayed unit
-      st.L_current = s8(p[16]);  // fridge current temp — reported in °C
-      st.R_current = s8(p[26]);  // freezer current temp (best-effort offset)
-      if(st.unit==='F') st.L_current = Math.round(st.L_current*9/5 + 32);
+      // Current temps confirmed on real hardware: whole degrees + tenths, always
+      // reported in °C (idx 16/17 = fridge, idx 26/27 = freezer). Convert for °F display.
+      const tenths=v=>v<=9?v/10:0;
+      st.L_current = s8(p[16]) + tenths(p[17]);
+      st.R_current = s8(p[26]) + tenths(p[27]);
+      if(st.unit==='F'){ st.L_current = st.L_current*9/5+32; st.R_current = st.R_current*9/5+32; }
+      st.L_current = Math.round(st.L_current*10)/10;
+      st.R_current = Math.round(st.R_current*10)/10;
     }
     return st;
   }
