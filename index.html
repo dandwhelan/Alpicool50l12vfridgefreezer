@@ -503,7 +503,7 @@ const Fridge = (()=>{
       const wp=Object.entries(writeCh.properties).filter(([,v])=>v).map(([k])=>k).join(',');
       log('in','Fridge connected: '+(dev.name||'device')+' · write char ['+wp+']');
       await send([CMD.QUERY]);
-      await sleep(400); await send([CMD.BIND]);   // some units require a bind before they accept writes
+      // removed automatic CMD.BIND as it interrupts pairing on dual-zone models
       poll=setInterval(()=>{ if(connected) send([CMD.QUERY]); },2000);
     }catch(e){
       log('er','Fridge connect: '+e.message);
@@ -515,9 +515,27 @@ const Fridge = (()=>{
   function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
   /* commands */
-  async function setLeftTarget(t){ await send([CMD.SET_LEFT,u8(t)]); await sleep(150); await send([CMD.QUERY]); }
-  async function setRightTarget(t){ await send([CMD.SET_RIGHT,u8(t)]); await sleep(150); await send([CMD.QUERY]); }
-  async function setByte(idx,val){ if(!settings){ log('er','Fridge: no cached settings yet'); return; } const s=Uint8Array.from(settings); if(idx>=s.length){ log('er','Fridge: index out of range'); return; } s[idx]=u8(val); await send([CMD.SET,...s]); await sleep(150); await send([CMD.QUERY]); }
+  async function setLeftTarget(t){ 
+    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
+    settings[4] = u8(t); 
+    await send([CMD.SET_LEFT, ...settings]); 
+    await sleep(150); 
+    await send([CMD.QUERY]); 
+  }
+  async function setRightTarget(t){ 
+    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
+    settings[14] = u8(t); 
+    await send([CMD.SET_RIGHT, ...settings]); 
+    await sleep(150); 
+    await send([CMD.QUERY]); 
+  }
+  async function setByte(idx,val){ 
+    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
+    settings[idx] = u8(val); 
+    await send([CMD.SET, ...settings]); 
+    await sleep(150); 
+    await send([CMD.QUERY]); 
+  }
 
   /* UI */
   function setState(state,text){
