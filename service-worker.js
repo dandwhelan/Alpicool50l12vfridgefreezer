@@ -1,6 +1,6 @@
 /* Alpicool Fridge BLE — offline cache.
    Bump CACHE on every release so clients pull fresh assets. */
-const CACHE = 'campervan-control-v2';
+const CACHE = 'campervan-control-v3';
 const ASSETS = [
   './',
   './index.html',

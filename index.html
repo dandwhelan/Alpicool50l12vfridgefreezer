@@ -269,7 +269,8 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
   <section id="view-diag" class="view">
     <div class="card">
       <h2>Activity log <span class="sp"></span>
-        <button class="btn ghost" style="width:auto;padding:6px 12px" id="log-clear">Clear</button></h2>
+        <button class="btn ghost" style="width:auto;padding:6px 12px" id="log-copy">Copy</button>
+        <button class="btn ghost" style="width:auto;padding:6px 12px;margin-left:6px" id="log-clear">Clear</button></h2>
       <div class="log" id="log"></div>
     </div>
 
@@ -336,6 +337,16 @@ function setDot(el, state){ el.className='dot'+(state?(' '+state):''); }
 /* Modbus CRC-16 (poly 0xA001) — shared, used by the power station. */
 function crc16(bytes){ let t=0xFFFF; for(const b of bytes){ t^=b; for(let i=0;i<8;i++) t=(t&1)?((t>>1)^0xA001):(t>>1);} return t&0xFFFF; }
 
+/* Write using whatever the characteristic actually supports. Cheap BLE modules
+   (the fridge especially) often only act on write-WITHOUT-response; using the
+   wrong type means the command is silently ignored. Returns the method used. */
+async function smartWrite(ch, data){
+  const p=ch.properties||{};
+  if(p.writeWithoutResponse && ch.writeValueWithoutResponse){ await ch.writeValueWithoutResponse(data); return 'no-resp'; }
+  if(p.write && ch.writeValueWithResponse){ await ch.writeValueWithResponse(data); return 'resp'; }
+  await ch.writeValue(data); return 'legacy';
+}
+
 async function discoverGatt(server){
   const out=$('gatt-log'); out.innerHTML='';
   try{
@@ -360,7 +371,7 @@ const Fridge = (()=>{
   const PREFIX=['A1-','AK1-','AK2-','AK3-','WT-','K25','BC','Alpicool','CF','CX','NX','EK','T36','Brass'];
 
   let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
-  let busy=Promise.resolve(), lastStatus=null, lastPayload=null, settings=null, snapshot=null;
+  let busy=Promise.resolve(), lastStatus=null, lastPayload=null, settings=null, snapshot=null, sizeLogged=false;
 
   function buildFrame(payload){
     const len=payload.length+2, body=[0xFE,0xFE,len,...payload];
@@ -388,8 +399,9 @@ const Fridge = (()=>{
     busy=busy.then(async ()=>{
       if(!writeCh) return;
       const f=buildFrame(payload);
-      try{ await writeCh.writeValue(f); log('tx','F→ '+hex(f)); }catch(e){ log('er','Fridge TX: '+e.message); }
-      await sleep(120);
+      try{ const m=await smartWrite(writeCh,f); log('tx',`F→ ${hex(f)} (${m})`); }
+      catch(e){ log('er','Fridge TX FAILED: '+e.message); }
+      await sleep(160);
     });
     return busy;
   }
@@ -402,7 +414,10 @@ const Fridge = (()=>{
     if(f.cmd===CMD.QUERY && f.payload.length>=4){
       lastPayload=f.payload; lastStatus=parseStatus(f.payload);
       settings=f.payload.slice(0,Math.max(0,f.payload.length-4));
+      if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (${f.payload.length>=24?'looks dual-zone':'looks single-zone'})`); sizeLogged=true; }
       updateUI(); renderBytes();
+    } else {
+      log('in',`  ↳ fridge replied to cmd 0x${f.cmd.toString(16).padStart(2,'0')} ${f.ok?'(accepted)':'(bad crc)'}`);
     }
   }
   async function connect(all){
@@ -421,9 +436,11 @@ const Fridge = (()=>{
       notifyCh=await svc.getCharacteristic(NOTIFY);
       await notifyCh.startNotifications();
       notifyCh.addEventListener('characteristicvaluechanged',onNotify);
-      connected=true; setState('on',dev.name||'Connected'); enable(true);
-      log('in','Fridge connected: '+(dev.name||'device'));
+      connected=true; sizeLogged=false; setState('on',dev.name||'Connected'); enable(true);
+      const wp=Object.entries(writeCh.properties).filter(([,v])=>v).map(([k])=>k).join(',');
+      log('in','Fridge connected: '+(dev.name||'device')+' · write char ['+wp+']');
       await send([CMD.QUERY]);
+      await sleep(400); await send([CMD.BIND]);   // some units require a bind before they accept writes
       poll=setInterval(()=>{ if(connected) send([CMD.QUERY]); },2000);
     }catch(e){
       log('er','Fridge connect: '+e.message);
@@ -503,7 +520,7 @@ const Power = (()=>{
     busy=busy.then(async ()=>{
       if(!writeCh) return;
       const arr=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
-      try{ await writeCh.writeValue(arr); log('tx','P→ '+hex(arr)); }catch(e){ log('er','Power TX: '+e.message); }
+      try{ const m=await smartWrite(writeCh,arr); log('tx',`P→ ${hex(arr)} (${m})`); }catch(e){ log('er','Power TX FAILED: '+e.message); }
       await sleep(180);
     });
     return busy;
@@ -648,6 +665,7 @@ $('h-power-btn').onclick=()=>Power.isConnected()?Power.disconnect():Power.connec
 
 // Diagnostics
 $('log-clear').onclick=()=>$('log').innerHTML='';
+$('log-copy').onclick=()=>{ const t=$('log').innerText; if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>log('in','Log copied to clipboard.'),()=>{}); };
 $('f-snap').onclick=()=>Fridge.snapshot();
 $('f-snap-clear').onclick=()=>Fridge.clearSnap();
 let rawTarget='fridge';
