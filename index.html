@@ -131,6 +131,20 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 .disabled-overlay{opacity:.5; pointer-events:none}
 .view{display:none}
 .view.active{display:block}
+
+/* Dual Zone Glass UI */
+.dual-zone-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+.zone-card { background:color-mix(in srgb,var(--bg-input) 40%,transparent); border:1px solid color-mix(in srgb,var(--text-main) 10%,transparent); border-radius:16px; padding:16px 8px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.1); backdrop-filter:blur(8px); display:flex; flex-direction:column; align-items:center; transition:.2s; }
+[data-theme="arctic"] .zone-card { background:rgba(255,255,255,0.4); box-shadow:0 4px 12px rgba(20,60,100,0.06); }
+.zone-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:12px; }
+.stepper-vertical { display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; }
+.stepper-vertical .step-btn { width:54px; height:54px; border-radius:16px; background:var(--bg-input); color:var(--text-main); font-size:24px; font-weight:400; box-shadow:0 2px 6px rgba(0,0,0,0.1); border:1px solid color-mix(in srgb,var(--text-main) 5%,transparent); transition:.1s; }
+.stepper-vertical .step-btn:active { transform:scale(.92); background:var(--accent); color:#fff; }
+.stepper-vertical .target-val { margin:8px 0; }
+.stepper-vertical .t { font-size:42px; font-weight:800; line-height:1; display:flex; align-items:flex-start; justify-content:center; }
+.stepper-vertical .unit { font-size:18px; color:var(--text-dim); font-weight:600; margin-left:2px; margin-top:4px; }
+.stepper-vertical .c { font-size:13px; font-weight:600; color:var(--text-dim); margin-top:4px; display:flex; align-items:center; justify-content:center; gap:5px; }
+.setpoint-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); }
 </style>
 </head>
 <body data-theme="ocean">
@@ -172,36 +186,54 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
   <section id="view-fridge" class="view">
     <div class="card">
       <div class="statusline"><span class="dot" id="f-dot"></span><span id="f-text">Fridge disconnected</span><span class="sp" style="flex:1"></span>
+        <button class="icon-btn" id="f-settings-btn" style="margin-right:8px" title="Settings">⚙️</button>
         <button class="btn primary" style="width:auto;padding:9px 16px" id="f-connect">Connect</button></div>
     </div>
 
-    <div class="card" id="f-dash-card">
-      <div class="dash">
-        <div class="metric"><div class="v" id="f-batt">–</div><div class="l">Battery</div></div>
-        <div class="ring-wrap">
-          <svg width="148" height="148" viewBox="0 0 148 148">
-            <circle cx="74" cy="74" r="64" fill="none" stroke="var(--ring-track)" stroke-width="12"/>
-            <circle id="f-ring" cx="74" cy="74" r="64" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="402.1" stroke-dashoffset="402.1"/>
-          </svg>
-          <div class="ring-center"><div><span class="big" id="f-current">--</span><span class="unit" id="f-unit">°C</span></div><div class="sub" id="f-power-state">—</div></div>
+    <div class="card disabled-overlay" id="f-control-card" style="background:transparent; border:none; box-shadow:none; padding:0">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:0 4px">
+        <h2 style="margin:0">Dual Zone Control</h2>
+        <button class="btn" id="f-sw-power" style="width:auto; padding:8px 14px; border-radius:10px; background:var(--bg-input)">Power OFF</button>
+      </div>
+
+      <div class="dual-zone-grid">
+        <!-- Fridge (Left) -->
+        <div class="zone-card">
+          <div class="zone-title">Fridge</div>
+          <div class="stepper-vertical">
+            <button class="step-btn" id="f-L-up">+</button>
+            <div class="target-val">
+              <div class="t"><span id="f-L-current">--</span><span class="unit" id="f-L-unit">°C</span></div>
+              <div class="c"><span class="setpoint-dot"></span> Set: <span id="f-L-target">--</span>°</div>
+            </div>
+            <button class="step-btn" id="f-L-down">−</button>
+          </div>
         </div>
-        <div class="metric"><div class="v" id="f-volt">–</div><div class="l">Voltage</div></div>
+        
+        <!-- Freezer (Right) -->
+        <div class="zone-card">
+          <div class="zone-title">Freezer</div>
+          <div class="stepper-vertical">
+            <button class="step-btn" id="f-R-up">+</button>
+            <div class="target-val">
+              <div class="t"><span id="f-R-current">--</span><span class="unit" id="f-R-unit">°C</span></div>
+              <div class="c"><span class="setpoint-dot"></span> Set: <span id="f-R-target">--</span>°</div>
+            </div>
+            <button class="step-btn" id="f-R-down">−</button>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="card disabled-overlay" id="f-control-card">
-      <h2>Target temperature</h2>
-      <div class="stepper">
-        <button class="step-btn" id="f-temp-down">−</button>
-        <div class="target-val"><div class="t"><span id="f-target">--</span><span id="f-target-unit" style="font-size:22px">°C</span></div><div class="c">setpoint</div></div>
-        <button class="step-btn" id="f-temp-up">+</button>
-      </div>
-      <input type="range" class="slider" id="f-slider" min="-20" max="20" value="0" step="1">
-      <div class="row"><div class="lab">Power <small>compressor on / off</small></div><label class="switch"><input type="checkbox" id="f-sw-power"><span class="slide"></span></label></div>
-      <div class="row"><div class="lab">Run mode <small>Max = fast · Eco = quiet</small></div><div class="seg" id="f-seg-mode"><button data-v="0">Max</button><button data-v="1">Eco</button></div></div>
+  <!-- ===================== FRIDGE SETTINGS ===================== -->
+  <section id="view-fridge-settings" class="view">
+    <div class="card">
+      <h2 style="font-size:16px; margin-bottom:20px"><button class="icon-btn" id="f-settings-back" style="display:inline-grid; width:30px; height:30px; margin-right:8px; border:none; background:transparent; font-size:16px">◀</button> Fridge Settings</h2>
       <div class="row"><div class="lab">Battery protection</div><div class="seg" id="f-seg-batt"><button data-v="0">Low</button><button data-v="1">Mid</button><button data-v="2">High</button></div></div>
-      <div class="row"><div class="lab">Temperature unit</div><div class="seg" id="f-seg-unit"><button data-v="0">°C</button><button data-v="1">°F</button></div></div>
+      <div class="row"><div class="lab">Temperature unit</div><div class="seg" id="f-seg-unit"><button data-v="1">°C</button><button data-v="2">°F</button></div></div>
       <div class="row"><div class="lab">Keypad lock</div><label class="switch"><input type="checkbox" id="f-sw-lock"><span class="slide"></span></label></div>
+      <div class="row"><div class="lab">Active Zone UI</div><div class="seg" id="f-seg-zone"><button data-v="0">Fridge</button><button data-v="1">Freezer</button></div></div>
     </div>
 
     <div class="card">
@@ -390,9 +422,25 @@ const Fridge = (()=>{
   }
   function parseStatus(p){
     const st={raw:p,len:p.length};
-    if(p.length>=4){ st.locked=!!p[0]; st.powered=!!p[1]; st.runMode=p[2]; st.battSaver=p[3]; st.target=s8(p[4]); }
-    if(p.length>=12){ st.maxTemp=s8(p[5]); st.minTemp=s8(p[6]); st.current=s8(p[p.length-4]); st.battPct=p[p.length-3]; st.voltage=p[p.length-2]+p[p.length-1]/10; }
-    st.unit='C';
+    if(p.length>=31){ 
+      st.locked=!!p[0]; 
+      st.powered=!!p[1]; 
+      st.zoneMode=p[2]; // 0=Fridge, 1=Freezer
+      st.battSaver=p[3]; // 0=Low, 1=Mid, 2=High
+      st.L_target=s8(p[4]); 
+      st.L_max=s8(p[5]); 
+      st.L_min=s8(p[6]);
+      st.unit = p[12]===2?'F':'C'; 
+      st.L_current = s8(p[16]);
+      st.R_current = s8(p[17]);
+      if (st.unit === 'F') {
+         st.L_current = Math.round(st.L_current*9/5 + 32);
+         st.R_current = Math.round(st.R_current*9/5 + 32);
+      }
+      st.R_target=s8(p[18]);
+      st.R_max=s8(p[19]);
+      st.R_min=s8(p[20]);
+    }
     return st;
   }
   function send(payload){
@@ -411,11 +459,19 @@ const Fridge = (()=>{
     log('rx','F← '+hex(bytes));
     const f=parseFrame(v); if(!f) return;
     if(!f.ok) log('er','  ↳ fridge checksum mismatch');
-    if(f.cmd===CMD.QUERY && f.payload.length>=4){
+    if(f.cmd===CMD.QUERY && f.payload.length>=31){
       lastPayload=f.payload; lastStatus=parseStatus(f.payload);
-      settings=f.payload.slice(0,Math.max(0,f.payload.length-4));
-      if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (${f.payload.length>=24?'looks dual-zone':'looks single-zone'})`); sizeLogged=true; }
+      // Reconstruct the 25-byte SET settings payload from the 31-byte STATUS payload
+      settings = new Uint8Array(25);
+      for(let i=0; i<14; i++) settings[i] = f.payload[i];
+      for(let i=0; i<8; i++)  settings[14+i] = f.payload[18+i];
+      settings[22] = f.payload[12] === 2 ? 32 : 0;
+      settings[23] = f.payload.length >= 29 ? f.payload[28] : 3;
+      settings[24] = f.payload.length >= 30 ? f.payload[29] : 0;
+      if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (dual-zone detected)`); sizeLogged=true; }
       updateUI(); renderBytes();
+    } else if(f.cmd===CMD.QUERY) {
+      log('er',`  ↳ fridge short payload: ${f.payload.length} bytes. Dual-zone UI requires 31 bytes.`);
     } else {
       log('in',`  ↳ fridge replied to cmd 0x${f.cmd.toString(16).padStart(2,'0')} ${f.ok?'(accepted)':'(bad crc)'}`);
     }
@@ -452,8 +508,8 @@ const Fridge = (()=>{
   function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
   /* commands */
-  function curTarget(){ return lastStatus&&lastStatus.target!=null?lastStatus.target:Number($('f-slider').value); }
-  async function setTarget(t){ await send([CMD.SET_LEFT,u8(t)]); await sleep(150); await send([CMD.QUERY]); }
+  async function setLeftTarget(t){ await send([CMD.SET_LEFT,u8(t)]); await sleep(150); await send([CMD.QUERY]); }
+  async function setRightTarget(t){ await send([CMD.SET_RIGHT,u8(t)]); await sleep(150); await send([CMD.QUERY]); }
   async function setByte(idx,val){ if(!settings){ log('er','Fridge: no cached settings yet'); return; } const s=Uint8Array.from(settings); if(idx>=s.length){ log('er','Fridge: index out of range'); return; } s[idx]=u8(val); await send([CMD.SET,...s]); await sleep(150); await send([CMD.QUERY]); }
 
   /* UI */
@@ -465,21 +521,22 @@ const Fridge = (()=>{
   }
   function enable(on){
     $('f-control-card').classList.toggle('disabled-overlay',!on);
-    ['f-temp-up','f-temp-down','f-slider','f-sw-power','f-sw-lock','f-bind'].forEach(i=>$(i).disabled=!on);
-    document.querySelectorAll('#f-seg-mode button,#f-seg-batt button,#f-seg-unit button').forEach(b=>b.disabled=!on);
+    ['f-L-up','f-L-down','f-R-up','f-R-down','f-sw-power','f-sw-lock','f-bind'].forEach(i=>$(i).disabled=!on);
+    document.querySelectorAll('#f-seg-zone button,#f-seg-batt button,#f-seg-unit button').forEach(b=>b.disabled=!on);
   }
   function updateUI(){
     const st=lastStatus; if(!st) return;
-    const u=st.unit==='F'?'°F':'°C'; $('f-unit').textContent=u; $('f-target-unit').textContent=u;
-    if(st.current!=null) $('f-current').textContent=st.current;
-    if(st.target!=null){ $('f-target').textContent=st.target; $('f-slider').value=st.target; }
-    if(st.battPct!=null){ $('f-batt').textContent=st.battPct+'%'; $('f-ring').style.strokeDashoffset=(2*Math.PI*64)*(1-st.battPct/100); }
-    if(st.voltage!=null) $('f-volt').textContent=st.voltage.toFixed(1)+'V';
-    $('f-power-state').textContent=st.powered?'● ON':'○ OFF'; $('f-power-state').style.color=st.powered?'var(--good)':'var(--text-dim)';
-    if(st.minTemp!=null&&st.maxTemp!=null&&st.minTemp<st.maxTemp){ $('f-slider').min=st.minTemp; $('f-slider').max=st.maxTemp; }
-    $('f-sw-power').checked=!!st.powered; $('f-sw-lock').checked=!!st.locked;
-    setSeg('f-seg-mode',st.runMode); setSeg('f-seg-batt',st.battSaver);
-    $('h-fridge-meta').textContent=`Alpicool · ${st.current??'?'}° · ${st.battPct??'?'}%`;
+    const u=st.unit==='F'?'°F':'°C'; $('f-L-unit').textContent=u; $('f-R-unit').textContent=u;
+    if(st.L_current!=null) $('f-L-current').textContent=st.L_current;
+    if(st.L_target!=null) $('f-L-target').textContent=st.L_target;
+    if(st.R_current!=null) $('f-R-current').textContent=st.R_current;
+    if(st.R_target!=null) $('f-R-target').textContent=st.R_target;
+    
+    $('f-sw-power').textContent=st.powered?'Power ON':'Power OFF'; 
+    $('f-sw-power').style.color=st.powered?'var(--good)':'var(--text-main)';
+    $('f-sw-lock').checked=!!st.locked;
+    setSeg('f-seg-zone',st.zoneMode); setSeg('f-seg-batt',st.battSaver); setSeg('f-seg-unit',st.unit==='F'?2:1);
+    $('h-fridge-meta').textContent=`Alpicool · ${st.L_current??'?'}° / ${st.R_current??'?'}°`;
   }
   function renderBytes(){
     const p=lastPayload; if(!p) return;
@@ -492,7 +549,7 @@ const Fridge = (()=>{
   }
   function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',Number(b.dataset.v)===Number(v))); }
 
-  return { connect, disconnect, isConnected:()=>connected, curTarget, setTarget, setByte,
+  return { connect, disconnect, isConnected:()=>connected, setLeftTarget, setRightTarget, setByte,
            bind:()=>send([CMD.BIND]), sendRaw:bytes=>send(bytes), snapshot:()=>{ if(lastPayload){snapshot=Uint8Array.from(lastPayload); renderBytes(); log('in','Fridge snapshot taken.');} },
            clearSnap:()=>{ snapshot=null; renderBytes(); }, hasStatus:()=>!!lastStatus };
 })();
@@ -634,17 +691,20 @@ const Power = (()=>{
    Wire up UI
    =================================================================== */
 // Fridge controls
-$('f-temp-up').onclick   =()=>{ const t=Fridge.curTarget()+1; $('f-target').textContent=t; Fridge.setTarget(t); };
-$('f-temp-down').onclick =()=>{ const t=Fridge.curTarget()-1; $('f-target').textContent=t; Fridge.setTarget(t); };
-$('f-slider').onchange   =e=>{ const t=Number(e.target.value); $('f-target').textContent=t; Fridge.setTarget(t); };
-$('f-sw-power').onchange  =e=>Fridge.setByte(1,e.target.checked?1:0);
+$('f-L-up').onclick   =()=>{ const t=Number($('f-L-target').textContent)+1; $('f-L-target').textContent=t; Fridge.setLeftTarget(t); };
+$('f-L-down').onclick =()=>{ const t=Number($('f-L-target').textContent)-1; $('f-L-target').textContent=t; Fridge.setLeftTarget(t); };
+$('f-R-up').onclick   =()=>{ const t=Number($('f-R-target').textContent)+1; $('f-R-target').textContent=t; Fridge.setRightTarget(t); };
+$('f-R-down').onclick =()=>{ const t=Number($('f-R-target').textContent)-1; $('f-R-target').textContent=t; Fridge.setRightTarget(t); };
+$('f-sw-power').onclick  =()=>{ const p=$('f-sw-power').textContent.includes('ON')?0:1; Fridge.setByte(1,p); };
 $('f-sw-lock').onchange   =e=>Fridge.setByte(0,e.target.checked?1:0);
-document.querySelectorAll('#f-seg-mode button').forEach(b=>b.onclick=()=>Fridge.setByte(2,Number(b.dataset.v)));
+document.querySelectorAll('#f-seg-zone button').forEach(b=>b.onclick=()=>Fridge.setByte(2,Number(b.dataset.v)));
 document.querySelectorAll('#f-seg-batt button').forEach(b=>b.onclick=()=>Fridge.setByte(3,Number(b.dataset.v)));
-document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setByte(11,Number(b.dataset.v))); // unit byte model-dependent
+document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setByte(12,Number(b.dataset.v))); // unit byte is p[12] for dual zone
 $('f-bind').onclick=()=>Fridge.bind();
 $('f-connect').onclick=()=>Fridge.isConnected()?Fridge.disconnect():Fridge.connect(false);
 $('h-fridge-btn').onclick=()=>Fridge.isConnected()?Fridge.disconnect():Fridge.connect(false);
+$('f-settings-btn').onclick=()=>{ showView('fridge-settings'); };
+$('f-settings-back').onclick=()=>{ showView('fridge'); };
 
 // Power controls
 $('p-ac').onchange =e=>Power.setReg(26,e.target.checked?1:0);
@@ -684,7 +744,10 @@ $('raw-send-btn').onclick=()=>{
 function crcAppend(bytes){ const c=crc16(bytes); return [...bytes,(c>>8)&0xFF,c&0xFF]; }
 
 // Tabs
-function showView(v){ ['home','fridge','power','diag'].forEach(x=>{ $('view-'+x).classList.toggle('active',x===v); $('tab-'+x).classList.toggle('active',x===v); }); }
+function showView(v){ ['home','fridge','power','diag','fridge-settings'].forEach(x=>{ 
+  const el = $('view-'+x); if(el) el.classList.toggle('active',x===v); 
+  const tab = $('tab-'+x); if(tab) tab.classList.toggle('active',x===v || (v==='fridge-settings'&&x==='fridge')); 
+}); }
 ['home','fridge','power','diag'].forEach(v=>$('tab-'+v).onclick=()=>showView(v));
 
 // Theme
