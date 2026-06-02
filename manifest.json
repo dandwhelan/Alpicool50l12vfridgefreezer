@@ -1,0 +1,19 @@
+{
+    "name": "Campervan Control",
+    "short_name": "Campervan",
+    "description": "Offline Web Bluetooth control for an Alpicool fridge freezer and a Fossibot power station.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0b1f33",
+    "theme_color": "#0b1f33",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
