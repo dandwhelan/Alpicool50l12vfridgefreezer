@@ -5,27 +5,20 @@
       <stop offset="1" stop-color="#0b1f33"/>
     </linearGradient>
   </defs>
-  <!-- Full-bleed background: maskable icons are cropped to the platform shape,
-       so no rounded corners here and all art stays inside the ~80% safe zone. -->
+  <!-- Full-bleed background: maskable icons are cropped to the platform shape. -->
   <rect width="512" height="512" fill="url(#bg)"/>
   <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
-    <!-- "smart" connectivity arcs -->
-    <g fill="none" stroke="#23c3b3" stroke-width="16" stroke-linecap="round">
-      <path d="M196 196 A 84 84 0 0 1 316 196"/>
-      <path d="M222 168 A 48 48 0 0 1 290 168"/>
-    </g>
-    <circle cx="256" cy="150" r="13" fill="#23c3b3"/>
-    <!-- campervan -->
-    <path d="M96 360 L96 300 Q96 280 116 278 L296 278 Q318 278 330 292 L360 318 L404 326
-             Q416 330 416 346 L416 360 Z" fill="#eef4fb"/>
-    <path d="M96 332 L416 332 L416 360 L96 360 Z" fill="#2f9be0"/>
-    <rect x="120" y="292" width="86" height="34" rx="8" fill="#0b1f33"/>
-    <rect x="214" y="292" width="78" height="34" rx="8" fill="#0b1f33"/>
-    <path d="M302 292 L324 294 L350 316 L306 316 Z" fill="#0b1f33"/>
-    <circle cx="406" cy="338" r="6" fill="#ffb020"/>
-    <circle cx="160" cy="362" r="30" fill="#0b1f33"/>
-    <circle cx="160" cy="362" r="13" fill="#eef4fb"/>
-    <circle cx="360" cy="362" r="30" fill="#0b1f33"/>
-    <circle cx="360" cy="362" r="13" fill="#eef4fb"/>
+  <g fill="none" stroke="#26cdbd" stroke-width="14" stroke-linecap="round">
+    <path d="M102 150 A 67 67 0 0 1 198 150"/>
+    <path d="M121 123 A 40 40 0 0 1 179 123"/>
+  </g>
+  <circle cx="150" cy="168" r="10" fill="#26cdbd"/>
+  <path d="M100 348 L100 280 Q100 262 118 262 L298 262 Q312 262 320 273 L350 314 L396 322 Q414 325 414 344 L414 348 Z" fill="#f2f7fc"/>
+  <path d="M100 326 L414 326 L414 348 L100 348 Z" fill="#2f9be0"/>
+  <rect x="126" y="276" width="80" height="32" rx="8" fill="#0c2c47"/>
+  <rect x="214" y="276" width="78" height="32" rx="8" fill="#0c2c47"/>
+  <path d="M300 276 L320 278 L346 308 L304 308 Z" fill="#0c2c47"/>
+  <circle cx="162" cy="350" r="30" fill="#0b1f33"/><circle cx="162" cy="350" r="12" fill="#f2f7fc"/>
+  <circle cx="356" cy="350" r="30" fill="#0b1f33"/><circle cx="356" cy="350" r="12" fill="#f2f7fc"/>
   </g>
 </svg>
