@@ -54,6 +54,7 @@ notify `1236`). **Full, verified details are in [`PROTOCOL.md`](PROTOCOL.md).** 
 
 ## Status
 
-Connection/sync and the dual-zone byte map are verified from a first-party `btsnoop_hci.log`.
-The current-temperature offsets in the dynamic tail (status idx 16 & 26) are best-effort —
-confirm on hardware if they look off.
+**Validated on the physical 50 L.** Connection/sync, the dual-zone byte map, fridge/freezer
+temp set, and the power toggle are all confirmed working on real hardware (a live session
+matched the official app). Current temps are `idx16/17` (fridge) and `idx26/27` (freezer) —
+whole degrees + tenths, reported in °C.
