@@ -1,7 +1,7 @@
 {
-    "name": "Alpicool Fridge BLE",
-    "short_name": "Fridge",
-    "description": "Offline Web Bluetooth control for Alpicool / Brass Monkey 12V fridge freezers.",
+    "name": "Campervan Control",
+    "short_name": "Campervan",
+    "description": "Offline Web Bluetooth control for an Alpicool fridge freezer and a Fossibot power station.",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",

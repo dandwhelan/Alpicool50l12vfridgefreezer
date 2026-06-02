@@ -1,34 +1,39 @@
 # Task / roadmap
 
-## ✅ Phase 1 — foundation (done)
-- [x] Research prior art (BrassMonkeyFridgeMonitor, alpicoold)
-- [x] Verify frame format + checksum against known-good packets
-- [x] Web Bluetooth PWA scaffold (matches fossibot-bluetooth architecture)
-- [x] Connect / disconnect, name-prefix + "all devices" chooser
-- [x] GATT discovery dump (confirm `1234/1235/1236` vs `ffe0/ffe1`)
-- [x] Query polling + status decode (best-effort)
-- [x] Controls: target temp, power, Max/Eco, battery protection, lock, unit
-- [x] Diagnostics: raw log, decoded byte table, snapshot/change-recorder, raw-command sender
-- [x] PWA install + offline (manifest, service worker, icon)
-- [x] PROTOCOL.md + README
+## ✅ Phase 1 — fridge foundation (done)
+- [x] Research prior art; verify fridge frame + checksum
+- [x] Web Bluetooth PWA scaffold
+- [x] Fridge connect/disconnect, query polling, status decode (best-effort)
+- [x] Fridge controls + diagnostics (raw log, byte table, snapshot recorder)
 
-## 🔲 Phase 2 — validate on the real 50 L (needs the physical fridge)
-- [ ] Confirm GATT profile is `1234/1235/1236` (capture from Pixel + report in GATT discovery)
-- [ ] Confirm status byte map: current temp, battery %, voltage offsets
-- [ ] Confirm °C/°F flag byte index (currently assumed idx 11 — see `unitByteIndex()`)
-- [ ] Confirm settings-block layout for `02` set (power/eco/lock all verified working)
-- [ ] Determine single- vs dual-zone for this 50 L model
-- [ ] Capture a btsnoop HCI log of the official app for any commands we're missing
+## ✅ Phase 2 — unified app (done)
+- [x] Reverse-engineer Fossibot protocol from fossibot-bluetooth (CRC + registers verified)
+- [x] Rebuild as **Campervan Control**: Home / Fridge / Power / Diagnostics
+- [x] **Separate Connect buttons** + independent BLE connections per device
+- [x] Power: SoC/watts/time dashboard; AC/DC/USB/LED/charge-rate/limits/silent/timers controls
+- [x] Power safety whitelist + hard-block on reg-68=0 (brick guard)
+- [x] Power register table + raw command sender in diagnostics
+- [x] Docs: PROTOCOL.md (fridge) + POWER_PROTOCOL.md (power)
 
-### How to capture from the Pixel 9 (for phase 2)
-1. Settings → About phone → tap **Build number** 7× to enable Developer options.
-2. Developer options → enable **Bluetooth HCI snoop log** (set to *Enabled/Filtered*).
-3. Use the official **CAR FRIDGE FREEZER** app: connect, change temp, toggle power, etc.
-4. Developer options → **Generate bug report** (or pull `btsnoop_hci.log`), open in **Wireshark**.
-5. Filter `btatt`, match the `1235` writes / `1236` notifications against actions.
+## 🔲 Phase 3 — validate on real hardware
+**Fridge (needs the physical 50 L):**
+- [ ] Confirm GATT profile `1234/1235/1236` (vs `ffe0/ffe1`)
+- [ ] Confirm status byte map (current temp / battery / voltage offsets, °C/°F flag idx)
+- [ ] Confirm `02` settings-block layout; single- vs dual-zone
 
-## 🔲 Phase 3 — polish & integrate
-- [ ] Temperature history graph
-- [ ] Shared theming/components with fossibot-bluetooth
-- [ ] Combined "campervan" launcher linking both PWAs (or a unified multi-device dashboard)
-- [ ] Replace SVG icon with a proper PNG icon set
+**Power (needs the Fossibot):**
+- [ ] Confirm connect + live telemetry (SoC, watts, time)
+- [ ] Confirm each output toggle (AC/DC/USB/LED) round-trips
+- [ ] Sanity-check charge/discharge limit writes before relying on them
+
+### Capturing from the Pixel 9 (for verification)
+1. Settings → About phone → tap **Build number** ×7 → Developer options.
+2. Enable **Bluetooth HCI snoop log**.
+3. Use the official apps (CAR FRIDGE FREEZER / BrightEMS) to perform actions.
+4. **Generate bug report** / pull `btsnoop_hci.log`, open in **Wireshark**, filter `btatt`.
+
+## 🔲 Phase 4 — polish
+- [ ] Temperature & SoC history graphs
+- [ ] Combined "scenes" (e.g. low-power night mode across both devices)
+- [ ] Proper PNG icon set
+- [ ] Fold improvements back toward fossibot-bluetooth where shareable

@@ -4,24 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b1f33">
-<meta name="description" content="Offline Web Bluetooth control for Alpicool / Brass Monkey 12V fridge freezers. No app, no cloud.">
+<meta name="description" content="Offline Web Bluetooth control for a campervan: Alpicool fridge freezer + Fossibot power station. No app, no cloud.">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<title>Alpicool Fridge BLE</title>
+<title>Campervan Control</title>
 <style>
-/* ---------- Theme tokens ---------- */
 :root{
   --bg-body:#0b1f33; --bg-card:#12304d; --bg-card-2:#0e273f; --bg-input:#0a1c2e;
   --text-main:#e8f1fa; --text-dim:#8fb0cc; --border:#1d4366;
   --accent:#2f9be0; --accent-2:#23c3b3; --good:#34c759; --warn:#ffb020; --bad:#ff4d4f;
-  --ring-track:#173a5c; --shadow:0 6px 22px rgba(0,0,0,.35);
-  --radius:16px;
+  --ring-track:#173a5c; --shadow:0 6px 22px rgba(0,0,0,.35); --radius:16px;
 }
 [data-theme="midnight"]{
   --bg-body:#08090c; --bg-card:#15171c; --bg-card-2:#101216; --bg-input:#0b0c10;
-  --text-main:#e6e8ec; --text-dim:#8b909a; --border:#262a32; --accent:#6c8cff; --accent-2:#36d399;
-  --ring-track:#23262e;
+  --text-main:#e6e8ec; --text-dim:#8b909a; --border:#262a32; --accent:#6c8cff; --accent-2:#36d399; --ring-track:#23262e;
 }
 [data-theme="arctic"]{
   --bg-body:#eef4fb; --bg-card:#ffffff; --bg-card-2:#f3f7fc; --bg-input:#ffffff;
@@ -33,79 +30,51 @@
   --text-main:#39ff6a; --text-dim:#1f8a3c; --border:#0c3d1a; --accent:#39ff6a; --accent-2:#7dffae;
   --good:#39ff6a; --ring-track:#0c3d1a; --shadow:0 0 18px rgba(57,255,106,.15);
 }
-
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:var(--bg-body); color:var(--text-main);
-  padding-bottom:84px; line-height:1.45;
-  padding-top:env(safe-area-inset-top);
-}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg-body); color:var(--text-main); line-height:1.45; padding-bottom:84px; padding-top:env(safe-area-inset-top)}
 [data-theme="terminal"] body{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
 
-/* ---------- Header ---------- */
-header{
-  position:sticky; top:0; z-index:20;
-  display:flex; align-items:center; gap:10px;
-  padding:14px 16px calc(14px); padding-top:calc(14px + env(safe-area-inset-top));
-  background:linear-gradient(180deg,var(--bg-body),color-mix(in srgb,var(--bg-body) 70%,transparent));
-  backdrop-filter:blur(8px);
-}
+header{position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px;
+  padding:14px 16px; padding-top:calc(14px + env(safe-area-inset-top));
+  background:linear-gradient(180deg,var(--bg-body),color-mix(in srgb,var(--bg-body) 70%,transparent)); backdrop-filter:blur(8px)}
 header .logo{font-size:22px}
 header h1{font-size:16px; margin:0; font-weight:700; letter-spacing:.3px; flex:1}
 header h1 small{display:block; font-weight:500; font-size:11px; color:var(--text-dim)}
-.icon-btn{
-  background:var(--bg-card); border:1px solid var(--border); color:var(--text-main);
-  width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer;
-  display:grid; place-items:center;
-}
+.icon-btn{background:var(--bg-card); border:1px solid var(--border); color:var(--text-main);
+  width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer; display:grid; place-items:center}
 .icon-btn:active{transform:scale(.94)}
-
 main{max-width:560px; margin:0 auto; padding:0 16px}
 
-/* ---------- Cards ---------- */
-.card{
-  background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius);
-  padding:16px; margin:14px 0; box-shadow:var(--shadow);
-}
-.card h2{font-size:13px; text-transform:uppercase; letter-spacing:.8px; color:var(--text-dim); margin:0 0 12px}
+.card{background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin:14px 0; box-shadow:var(--shadow)}
+.card h2{font-size:13px; text-transform:uppercase; letter-spacing:.8px; color:var(--text-dim); margin:0 0 12px; display:flex; align-items:center; gap:8px}
+.card h2 .sp{flex:1}
 
-/* ---------- Connection banner ---------- */
-#status-banner{
-  display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600;
-}
-.dot{width:10px; height:10px; border-radius:50%; background:var(--bad); flex:none;
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--bad) 25%,transparent)}
+.statusline{display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600}
+.dot{width:10px; height:10px; border-radius:50%; background:var(--bad); flex:none; box-shadow:0 0 0 4px color-mix(in srgb,var(--bad) 25%,transparent)}
 .dot.on{background:var(--good); box-shadow:0 0 0 4px color-mix(in srgb,var(--good) 25%,transparent)}
 .dot.warn{background:var(--warn); box-shadow:0 0 0 4px color-mix(in srgb,var(--warn) 25%,transparent)}
 
-/* ---------- Dashboard ---------- */
 .dash{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; text-align:center}
-.metric .v{font-size:22px; font-weight:800}
+.metric .v{font-size:20px; font-weight:800}
 .metric .l{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px}
-.ring-wrap{position:relative; width:150px; height:150px; margin:0 auto}
+.ring-wrap{position:relative; width:148px; height:148px; margin:0 auto}
 .ring-wrap svg{transform:rotate(-90deg)}
 .ring-center{position:absolute; inset:0; display:grid; place-content:center; text-align:center}
-.ring-center .temp{font-size:40px; font-weight:800; line-height:1}
-.ring-center .unit{font-size:16px; color:var(--text-dim)}
+.ring-center .big{font-size:38px; font-weight:800; line-height:1}
+.ring-center .unit{font-size:15px; color:var(--text-dim)}
 .ring-center .sub{font-size:12px; color:var(--text-dim); margin-top:4px}
 
-/* ---------- Target stepper ---------- */
 .stepper{display:flex; align-items:center; justify-content:center; gap:18px; margin:6px 0 2px}
-.step-btn{
-  width:62px; height:62px; border-radius:50%; border:none; font-size:30px; font-weight:700;
-  background:var(--accent); color:#fff; cursor:pointer; display:grid; place-items:center;
-}
+.step-btn{width:62px; height:62px; border-radius:50%; border:none; font-size:30px; font-weight:700; background:var(--accent); color:#fff; cursor:pointer; display:grid; place-items:center}
 [data-theme="terminal"] .step-btn{color:#000}
-.step-btn:active{transform:scale(.92)}
-.step-btn:disabled{opacity:.4}
+.step-btn:active{transform:scale(.92)} .step-btn:disabled{opacity:.4}
 .target-val{min-width:120px; text-align:center}
-.target-val .t{font-size:46px; font-weight:800; line-height:1}
+.target-val .t{font-size:44px; font-weight:800; line-height:1}
 .target-val .c{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px}
 .slider{width:100%; margin-top:14px; accent-color:var(--accent)}
 
-/* ---------- Toggles / segmented ---------- */
 .row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid var(--border)}
 .row:first-child{border-top:none}
 .row .lab{font-size:14px; font-weight:600}
@@ -117,572 +86,598 @@ main{max-width:560px; margin:0 auto; padding:0 16px}
 .switch input:checked + .slide{background:var(--good)}
 .switch input:checked + .slide:before{transform:translateX(22px)}
 .switch input:disabled + .slide{opacity:.4; cursor:not-allowed}
-.seg{display:inline-flex; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; overflow:hidden}
-.seg button{border:none; background:transparent; color:var(--text-dim); padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer}
+.seg{display:inline-flex; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; overflow:hidden; flex-wrap:wrap}
+.seg button{border:none; background:transparent; color:var(--text-dim); padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer}
 .seg button.active{background:var(--accent); color:#fff}
 [data-theme="terminal"] .seg button.active{color:#000}
 .seg button:disabled{opacity:.4}
 
-/* ---------- Buttons ---------- */
-.btn{
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  border:1px solid var(--border); background:var(--bg-card-2); color:var(--text-main);
-  padding:12px 16px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; width:100%;
-}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--border); background:var(--bg-card-2); color:var(--text-main); padding:12px 16px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; width:100%}
 .btn.primary{background:var(--accent); color:#fff; border-color:transparent}
 [data-theme="terminal"] .btn.primary{color:#000}
+.btn.danger{background:var(--bad); color:#fff; border-color:transparent}
 .btn.ghost{background:transparent}
-.btn:active{transform:scale(.98)}
-.btn:disabled{opacity:.45; cursor:not-allowed}
+.btn:active{transform:scale(.98)} .btn:disabled{opacity:.45; cursor:not-allowed}
 .btn-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 
-/* ---------- Diagnostics ---------- */
-#view-diagnostics{display:none}
-.log{
-  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.5;
-  background:var(--bg-input); border:1px solid var(--border); border-radius:10px;
-  padding:10px; height:240px; overflow:auto; white-space:pre-wrap; word-break:break-all;
-}
+.tile{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; text-decoration:none; color:inherit}
+.tile .em{font-size:30px}
+.tile .name{font-weight:700; font-size:15px}
+.tile .meta{font-size:12px; color:var(--text-dim)}
+
+details{border-top:1px solid var(--border); padding:8px 0}
+details summary{cursor:pointer; font-weight:600; font-size:14px; list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary:before{content:"▸ "; color:var(--text-dim)}
+details[open] summary:before{content:"▾ "}
+
+.log{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.5; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; padding:10px; height:220px; overflow:auto; white-space:pre-wrap; word-break:break-all}
 .log .tx{color:var(--accent)} .log .rx{color:var(--accent-2)} .log .er{color:var(--bad)} .log .in{color:var(--text-dim)}
 table.bytes{width:100%; border-collapse:collapse; font-family:ui-monospace,monospace; font-size:12px}
-table.bytes th,table.bytes td{border:1px solid var(--border); padding:4px 6px; text-align:center}
+table.bytes th,table.bytes td{border:1px solid var(--border); padding:3px 5px; text-align:center}
 table.bytes th{color:var(--text-dim); font-weight:600}
 table.bytes td.changed{background:color-mix(in srgb,var(--warn) 35%,transparent)}
-.field-list{display:grid; grid-template-columns:1fr auto; gap:6px 14px; font-size:13px}
-.field-list .k{color:var(--text-dim)}
 .raw-send{display:flex; gap:8px}
 .raw-send input{flex:1; background:var(--bg-input); border:1px solid var(--border); color:var(--text-main); border-radius:10px; padding:11px; font-family:ui-monospace,monospace; font-size:13px}
 .muted{color:var(--text-dim); font-size:12px; margin:8px 0 0}
-.pill{display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-dim)}
-.warnbox{background:color-mix(in srgb,var(--warn) 14%,transparent); border:1px solid color-mix(in srgb,var(--warn) 50%,transparent); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text-main)}
+.warnbox{background:color-mix(in srgb,var(--warn) 14%,transparent); border:1px solid color-mix(in srgb,var(--warn) 50%,transparent); border-radius:10px; padding:10px 12px; font-size:12.5px}
+.dangerbox{background:color-mix(in srgb,var(--bad) 14%,transparent); border:1px solid color-mix(in srgb,var(--bad) 55%,transparent); border-radius:10px; padding:10px 12px; font-size:12.5px}
 
-/* ---------- Bottom nav ---------- */
-nav.tabs{
-  position:fixed; left:0; right:0; bottom:0; z-index:20;
-  display:flex; background:var(--bg-card); border-top:1px solid var(--border);
-  padding-bottom:env(safe-area-inset-bottom);
-}
+nav.tabs{position:fixed; left:0; right:0; bottom:0; z-index:20; display:flex; background:var(--bg-card); border-top:1px solid var(--border); padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs button{flex:1; background:transparent; border:none; color:var(--text-dim); padding:10px 0 12px; font-size:11px; font-weight:600; cursor:pointer; display:grid; gap:3px; justify-items:center}
 nav.tabs button .ic{font-size:20px}
 nav.tabs button.active{color:var(--accent)}
-
 select{background:var(--bg-input); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:6px 8px; font-size:13px}
 .disabled-overlay{opacity:.5; pointer-events:none}
+.view{display:none}
+.view.active{display:block}
 </style>
 </head>
 <body data-theme="ocean">
 
 <header>
-  <span class="logo">❄️</span>
-  <h1>Alpicool Fridge<small>Web Bluetooth · offline · no cloud</small></h1>
+  <span class="logo">🚐</span>
+  <h1>Campervan Control<small>Web Bluetooth · offline · no cloud</small></h1>
   <button class="icon-btn" id="theme-btn" title="Theme">🎨</button>
-  <button class="icon-btn" id="connect-btn" title="Connect">🔌</button>
 </header>
 
 <main>
 
-  <!-- ===================== CONTROL VIEW ===================== -->
-  <section id="view-control">
-
+  <!-- ===================== HOME ===================== -->
+  <section id="view-home" class="view active">
     <div class="card">
-      <div id="status-banner"><span class="dot" id="conn-dot"></span><span id="conn-text">Disconnected</span></div>
-      <p class="muted" id="conn-hint">Tap the 🔌 icon to connect to your fridge. Bluetooth must be on and you must be within range. Web Bluetooth needs Chrome/Edge on Android, Windows, Mac or Linux (it works great on your Pixel).</p>
+      <div class="tile">
+        <span class="em">❄️</span>
+        <div><div class="name">Fridge <span class="dot" id="h-fridge-dot" style="display:inline-block;vertical-align:middle"></span></div>
+          <div class="meta" id="h-fridge-meta">Alpicool · not connected</div></div>
+        <button class="btn primary" style="width:auto;padding:10px 16px" id="h-fridge-btn">Connect</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tile">
+        <span class="em">🔋</span>
+        <div><div class="name">Power station <span class="dot" id="h-power-dot" style="display:inline-block;vertical-align:middle"></span></div>
+          <div class="meta" id="h-power-meta">Fossibot · not connected</div></div>
+        <button class="btn primary" style="width:auto;padding:10px 16px" id="h-power-btn">Connect</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>About</h2>
+      <p class="muted" style="margin-top:0">Two independent Bluetooth systems, controlled from one app. The fridge (Alpicool) and the power station (Fossibot) each connect separately — connect whichever you're near.</p>
+      <p class="muted">Needs Chrome/Edge (Android/desktop) or Bluefy (iOS), Bluetooth on, and a secure (https) page. Works great on a Pixel.</p>
+    </div>
+  </section>
+
+  <!-- ===================== FRIDGE ===================== -->
+  <section id="view-fridge" class="view">
+    <div class="card">
+      <div class="statusline"><span class="dot" id="f-dot"></span><span id="f-text">Fridge disconnected</span><span class="sp" style="flex:1"></span>
+        <button class="btn primary" style="width:auto;padding:9px 16px" id="f-connect">Connect</button></div>
     </div>
 
-    <!-- Dashboard -->
-    <div class="card" id="dash-card">
+    <div class="card" id="f-dash-card">
       <div class="dash">
-        <div class="metric"><div class="v" id="m-batt">–</div><div class="l">Battery</div></div>
+        <div class="metric"><div class="v" id="f-batt">–</div><div class="l">Battery</div></div>
         <div class="ring-wrap">
-          <svg width="150" height="150" viewBox="0 0 150 150">
-            <circle cx="75" cy="75" r="66" fill="none" stroke="var(--ring-track)" stroke-width="12"/>
-            <circle id="ring" cx="75" cy="75" r="66" fill="none" stroke="var(--accent)" stroke-width="12"
-                    stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7"/>
+          <svg width="148" height="148" viewBox="0 0 148 148">
+            <circle cx="74" cy="74" r="64" fill="none" stroke="var(--ring-track)" stroke-width="12"/>
+            <circle id="f-ring" cx="74" cy="74" r="64" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="402.1" stroke-dashoffset="402.1"/>
           </svg>
-          <div class="ring-center">
-            <div><span class="temp" id="m-current">--</span><span class="unit" id="m-unit">°C</span></div>
-            <div class="sub" id="m-power">—</div>
-          </div>
+          <div class="ring-center"><div><span class="big" id="f-current">--</span><span class="unit" id="f-unit">°C</span></div><div class="sub" id="f-power-state">—</div></div>
         </div>
-        <div class="metric"><div class="v" id="m-volt">–</div><div class="l">Voltage</div></div>
+        <div class="metric"><div class="v" id="f-volt">–</div><div class="l">Voltage</div></div>
       </div>
     </div>
 
-    <!-- Target temperature -->
-    <div class="card" id="control-card">
-      <h2>Target Temperature</h2>
+    <div class="card disabled-overlay" id="f-control-card">
+      <h2>Target temperature</h2>
       <div class="stepper">
-        <button class="step-btn" id="temp-down" disabled>−</button>
-        <div class="target-val"><div class="t"><span id="target-val">--</span><span id="target-unit" style="font-size:22px">°C</span></div><div class="c">setpoint</div></div>
-        <button class="step-btn" id="temp-up" disabled>+</button>
+        <button class="step-btn" id="f-temp-down">−</button>
+        <div class="target-val"><div class="t"><span id="f-target">--</span><span id="f-target-unit" style="font-size:22px">°C</span></div><div class="c">setpoint</div></div>
+        <button class="step-btn" id="f-temp-up">+</button>
       </div>
-      <input type="range" class="slider" id="temp-slider" min="-20" max="20" value="0" step="1" disabled>
-
-      <div class="row">
-        <div class="lab">Power <small>turn the compressor on / off</small></div>
-        <label class="switch"><input type="checkbox" id="sw-power" disabled><span class="slide"></span></label>
-      </div>
-      <div class="row">
-        <div class="lab">Run mode <small>Max = fast cooling · Eco = quiet/efficient</small></div>
-        <div class="seg" id="seg-mode"><button data-v="0" disabled>Max</button><button data-v="1" disabled>Eco</button></div>
-      </div>
-      <div class="row">
-        <div class="lab">Battery protection <small>cut-off voltage level</small></div>
-        <div class="seg" id="seg-batt"><button data-v="0" disabled>Low</button><button data-v="1" disabled>Mid</button><button data-v="2" disabled>High</button></div>
-      </div>
-      <div class="row">
-        <div class="lab">Temperature unit</div>
-        <div class="seg" id="seg-unit"><button data-v="0" disabled>°C</button><button data-v="1" disabled>°F</button></div>
-      </div>
-      <div class="row">
-        <div class="lab">Keypad lock <small>lock the buttons on the fridge</small></div>
-        <label class="switch"><input type="checkbox" id="sw-lock" disabled><span class="slide"></span></label>
-      </div>
+      <input type="range" class="slider" id="f-slider" min="-20" max="20" value="0" step="1">
+      <div class="row"><div class="lab">Power <small>compressor on / off</small></div><label class="switch"><input type="checkbox" id="f-sw-power"><span class="slide"></span></label></div>
+      <div class="row"><div class="lab">Run mode <small>Max = fast · Eco = quiet</small></div><div class="seg" id="f-seg-mode"><button data-v="0">Max</button><button data-v="1">Eco</button></div></div>
+      <div class="row"><div class="lab">Battery protection</div><div class="seg" id="f-seg-batt"><button data-v="0">Low</button><button data-v="1">Mid</button><button data-v="2">High</button></div></div>
+      <div class="row"><div class="lab">Temperature unit</div><div class="seg" id="f-seg-unit"><button data-v="0">°C</button><button data-v="1">°F</button></div></div>
+      <div class="row"><div class="lab">Keypad lock</div><label class="switch"><input type="checkbox" id="f-sw-lock"><span class="slide"></span></label></div>
     </div>
 
     <div class="card">
       <h2>Pairing</h2>
-      <p class="muted" style="margin-top:0">Most actions work without pairing. If the fridge ignores commands, press the <b>SET</b> button on the fridge, then tap Bind within a few seconds.</p>
-      <button class="btn" id="bind-btn" disabled>🔗 Bind / confirm this fridge</button>
+      <p class="muted" style="margin-top:0">If the fridge ignores commands, press its <b>SET</b> button then tap Bind within a few seconds.</p>
+      <button class="btn" id="f-bind" disabled>🔗 Bind / confirm this fridge</button>
     </div>
-
   </section>
 
-  <!-- ===================== DIAGNOSTICS VIEW ===================== -->
-  <section id="view-diagnostics">
-
+  <!-- ===================== POWER ===================== -->
+  <section id="view-power" class="view">
     <div class="card">
-      <h2>Live packet log</h2>
-      <div class="log" id="log"></div>
-      <div class="btn-grid" style="margin-top:10px">
-        <button class="btn ghost" id="log-clear">Clear</button>
-        <button class="btn ghost" id="log-copy">Copy log</button>
+      <div class="statusline"><span class="dot" id="p-dot"></span><span id="p-text">Power station disconnected</span><span class="sp" style="flex:1"></span>
+        <button class="btn primary" style="width:auto;padding:9px 16px" id="p-connect">Connect</button></div>
+    </div>
+
+    <div class="card" id="p-dash-card">
+      <div class="dash">
+        <div class="metric"><div class="v" id="p-in">–</div><div class="l">Input</div></div>
+        <div class="ring-wrap">
+          <svg width="148" height="148" viewBox="0 0 148 148">
+            <circle cx="74" cy="74" r="64" fill="none" stroke="var(--ring-track)" stroke-width="12"/>
+            <circle id="p-ring" cx="74" cy="74" r="64" fill="none" stroke="var(--accent-2)" stroke-width="12" stroke-linecap="round" stroke-dasharray="402.1" stroke-dashoffset="402.1"/>
+          </svg>
+          <div class="ring-center"><div><span class="big" id="p-soc">--</span><span class="unit">%</span></div><div class="sub" id="p-state">—</div></div>
+        </div>
+        <div class="metric"><div class="v" id="p-out">–</div><div class="l">Output</div></div>
       </div>
+      <div style="text-align:center;margin-top:8px" class="muted" id="p-time">—</div>
+    </div>
+
+    <div class="card disabled-overlay" id="p-control-card">
+      <h2>Outputs</h2>
+      <div class="row"><div class="lab">AC inverter</div><label class="switch"><input type="checkbox" id="p-ac"><span class="slide"></span></label></div>
+      <div class="row"><div class="lab">DC / 12V</div><label class="switch"><input type="checkbox" id="p-dc"><span class="slide"></span></label></div>
+      <div class="row"><div class="lab">USB</div><label class="switch"><input type="checkbox" id="p-usb"><span class="slide"></span></label></div>
+      <div class="row"><div class="lab">LED light</div><div class="seg" id="p-led"><button data-v="0">Off</button><button data-v="1">On</button><button data-v="2">Flash</button><button data-v="3">SOS</button></div></div>
+
+      <h2 style="margin-top:18px">Charging</h2>
+      <div class="row"><div class="lab">AC charge rate <small>1 (slow) → 5 (fast)</small></div><div class="seg" id="p-charge"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button></div></div>
+      <div class="row"><div class="lab">Silent charging</div><label class="switch"><input type="checkbox" id="p-silent"><span class="slide"></span></label></div>
+      <div class="row" style="display:block">
+        <div class="lab" style="display:flex;justify-content:space-between">Charge limit (max SoC)<span id="p-cl-val">100%</span></div>
+        <input type="range" class="slider" id="p-charge-limit" min="50" max="100" value="100" step="1">
+      </div>
+      <div class="row" style="display:block">
+        <div class="lab" style="display:flex;justify-content:space-between">Discharge limit (min SoC)<span id="p-dl-val">10%</span></div>
+        <input type="range" class="slider" id="p-discharge-limit" min="0" max="50" value="10" step="1">
+      </div>
+
+      <details>
+        <summary>Advanced timers</summary>
+        <div class="row"><div class="lab">AC standby</div><select id="p-ac-standby"><option value="0">Never</option><option value="480">8h</option><option value="960">16h</option><option value="1440">24h</option></select></div>
+        <div class="row"><div class="lab">DC standby</div><select id="p-dc-standby"><option value="0">Never</option><option value="480">8h</option><option value="960">16h</option><option value="1440">24h</option></select></div>
+        <div class="row" style="display:block">
+          <div class="lab">Whole-unit idle shutdown</div>
+          <div class="dangerbox" style="margin:8px 0">⚠️ Never set this to 0 — writing 0 to register 68 has <b>permanently bricked</b> units. This control only offers safe values.</div>
+          <select id="p-sys-standby"><option value="">— select —</option><option value="5">5 min</option><option value="10">10 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="480">8h</option></select>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===================== DIAGNOSTICS ===================== -->
+  <section id="view-diag" class="view">
+    <div class="card">
+      <h2>Activity log <span class="sp"></span>
+        <button class="btn ghost" style="width:auto;padding:6px 12px" id="log-clear">Clear</button></h2>
+      <div class="log" id="log"></div>
     </div>
 
     <div class="card">
-      <h2>Decoded status (last query)</h2>
-      <p class="muted" style="margin-top:0">Byte indices are relative to the status payload (after the <code>01</code> command byte). Tap <b>Snapshot</b>, change one thing on the fridge or in the official app, then watch which byte highlights — that is how we confirm the map for your exact 50&nbsp;L unit.</p>
-      <div style="overflow:auto"><table class="bytes" id="byte-table"><tbody><tr><td class="in">Connect & query to populate…</td></tr></tbody></table></div>
-      <div class="btn-grid" style="margin-top:10px">
-        <button class="btn ghost" id="snap-btn">📸 Snapshot</button>
-        <button class="btn ghost" id="snap-clear">Clear highlight</button>
-      </div>
-      <div class="field-list" id="field-list" style="margin-top:14px"></div>
+      <h2>Raw command</h2>
+      <div class="row" style="border:none;padding-top:0"><div class="lab">Target device</div>
+        <div class="seg" id="raw-target"><button data-v="fridge" class="active">Fridge</button><button data-v="power">Power</button></div></div>
+      <p class="muted" style="margin-top:0" id="raw-hint"></p>
+      <div class="raw-send"><input id="raw-input" placeholder="hex…" autocomplete="off" spellcheck="false"><button class="btn primary" style="width:auto;padding:11px 18px" id="raw-send-btn">Send</button></div>
+      <div class="dangerbox" style="margin-top:12px">⚠️ Don't send unknown values to the power station — its firmware does <b>not</b> validate writes and bad values can brick it. Reg 68 = 0 is blocked here.</div>
+    </div>
+
+    <div class="card">
+      <h2>Fridge — status bytes</h2>
+      <p class="muted" style="margin-top:0">Snapshot, change one setting on the fridge, watch which byte highlights — confirms the map for your 50&nbsp;L.</p>
+      <div style="overflow:auto"><table class="bytes" id="f-byte-table"><tbody><tr><td class="in">Connect fridge & query…</td></tr></tbody></table></div>
+      <div class="btn-grid" style="margin-top:10px"><button class="btn ghost" id="f-snap">📸 Snapshot</button><button class="btn ghost" id="f-snap-clear">Clear highlight</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Power — registers</h2>
+      <p class="muted" style="margin-top:0">Status registers (0x1104), 16-bit big-endian, index → value.</p>
+      <div style="overflow:auto;max-height:300px"><table class="bytes" id="p-reg-table"><tbody><tr><td class="in">Connect power station…</td></tr></tbody></table></div>
     </div>
 
     <div class="card">
       <h2>GATT discovery</h2>
-      <p class="muted" style="margin-top:0">All services & characteristics found on the connected device. Use this to confirm your 50&nbsp;L uses the <code>1234/1235/1236</code> profile (vs <code>ffe0/ffe1</code> on some models).</p>
-      <div class="log" id="gatt-log" style="height:160px"><span class="in">Connect to populate…</span></div>
+      <div class="log" id="gatt-log" style="height:150px"><span class="in">Connect a device…</span></div>
     </div>
-
-    <div class="card">
-      <h2>Send raw command</h2>
-      <p class="muted" style="margin-top:0">Enter the <b>payload</b> only (command byte + params, hex). The <code>FE FE</code>, length and checksum are added automatically. Example <code>01</code> = query, <code>05 ec</code> = set −20°C.</p>
-      <div class="raw-send">
-        <input id="raw-input" placeholder="e.g. 05 ec" autocomplete="off" spellcheck="false">
-        <button class="btn primary" id="raw-send-btn" style="width:auto; padding:11px 18px" disabled>Send</button>
-      </div>
-      <div class="warnbox" style="margin-top:12px">⚠️ The fridge accepts commands with no authentication. Don't send random bytes to <code>02</code> (set-all) or <code>04</code> (reset) unless you know the layout — you could change settings or factory-reset it.</div>
-    </div>
-
-    <div class="card">
-      <h2>About this build</h2>
-      <p class="muted" style="margin-top:0">
-        Protocol: Alpicool / Brass Monkey frame <code>FE FE | len | payload | sum16</code>.
-        Service <code>1234</code>, write <code>1235</code>, notify <code>1236</code>.
-        The frame/checksum core is verified against the official <i>CAR FRIDGE FREEZER</i> app; the per-byte status map is <b>best-effort and may differ on your 50&nbsp;L</b> — help confirm it with the Snapshot tool above.
-        See <code>PROTOCOL.md</code> in the repo.
-      </p>
-    </div>
-
   </section>
 
 </main>
 
 <nav class="tabs">
-  <button id="tab-control" class="active"><span class="ic">🎛️</span>Control</button>
-  <button id="tab-diag"><span class="ic">🛠️</span>Diagnostics</button>
+  <button id="tab-home" class="active"><span class="ic">🏠</span>Home</button>
+  <button id="tab-fridge"><span class="ic">❄️</span>Fridge</button>
+  <button id="tab-power"><span class="ic">🔋</span>Power</button>
+  <button id="tab-diag"><span class="ic">🛠️</span>Diag</button>
 </nav>
 
 <script>
 "use strict";
+/* ===================================================================
+   Campervan Control — two independent Web Bluetooth systems:
+     • Fridge  (Alpicool / Brass Monkey)  service 1234 / 1235 / 1236
+     • Power   (Fossibot / Aferiy, Modbus) service a002 / c304 / c305
+   =================================================================== */
 
-/* ====================================================================
-   Alpicool / Brass Monkey 12V fridge — Web Bluetooth controller
-   Protocol frame:  FE FE | LEN | <payload...> | CHK_hi CHK_lo
-     LEN  = payload length + 2  (the +2 counts the checksum bytes)
-     CHK  = 16-bit big-endian sum of every byte before the checksum
-   Payload[0] is the command code; remaining bytes are parameters.
-   ==================================================================== */
-
-const SERVICE_UUID = '00001234-0000-1000-8000-00805f9b34fb';
-const WRITE_UUID   = '00001235-0000-1000-8000-00805f9b34fb';
-const NOTIFY_UUID  = '00001236-0000-1000-8000-00805f9b34fb';
-
-// Commands (payload[0])
-const CMD = { BIND:0x00, QUERY:0x01, SET:0x02, RESET:0x04, SET_LEFT:0x05, SET_RIGHT:0x06 };
-
-// Names Alpicool / Brass Monkey units are known to advertise.
-const NAME_PREFIXES = ['A1-','AK1-','AK2-','AK3-','WT-','K25','BC','Alpicool','CF','CX','NX','EK','T36','Brass'];
-
-const POLL_MS = 2000;
-
-let device=null, server=null, writeChar=null, notifyChar=null;
-let pollTimer=null, connected=false;
-let lastStatus=null;        // parsed object
-let lastPayload=null;       // Uint8Array of the status payload (after the 01 byte)
-let cachedSettings=null;    // Uint8Array used to rebuild SET (0x02) commands
-let snapshot=null;          // Uint8Array snapshot for change-recording
-let busy=Promise.resolve(); // serialises BLE writes
-
-/* ---------- tiny helpers ---------- */
 const $ = id => document.getElementById(id);
 const hex = b => Array.from(b, x => x.toString(16).padStart(2,'0')).join(' ');
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
-const s8 = v => v>127 ? v-256 : v;            // unsigned byte -> signed
-const u8 = v => v<0 ? v+256 : v;              // signed -> unsigned byte
-const now = () => new Date().toLocaleTimeString();
+const s8 = v => v>127 ? v-256 : v;
+const u8 = v => ((v%256)+256)%256;
+const clamp = (v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const tstamp = () => new Date().toLocaleTimeString();
 
 function log(kind, msg){
   const el=$('log'); if(!el) return;
-  const span=document.createElement('div');
-  span.className=kind;
-  span.textContent=`[${now()}] ${msg}`;
-  el.appendChild(span);
-  el.scrollTop=el.scrollHeight;
+  const d=document.createElement('div'); d.className=kind; d.textContent=`[${tstamp()}] ${msg}`;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
 }
+function setDot(el, state){ el.className='dot'+(state?(' '+state):''); }
 
-/* ---------- frame build / parse ---------- */
-function buildFrame(payload){
-  const len = payload.length + 2;
-  const body = [0xFE, 0xFE, len, ...payload];
-  let sum = 0; for(const b of body) sum += b;
-  sum &= 0xFFFF;
-  return new Uint8Array([...body, (sum>>8)&0xFF, sum&0xFF]);
-}
-
-function parseFrame(view){
-  // view: DataView. Returns {cmd, payload(Uint8Array after cmd), ok} or null.
-  const n=view.byteLength;
-  if(n<6) return null;               // FE FE LEN CMD CHK CHK is the minimum
-  if(view.getUint8(0)!==0xFE || view.getUint8(1)!==0xFE) return null;
-  const len=view.getUint8(2);
-  const total=3+len;                 // 2 header + 1 len byte; len already includes the 2 cks bytes
-  // Some firmwares pad; trust the declared length when it fits, else use what we got.
-  const end = (total>=6 && total<=n) ? total : n;
-  const cksHi=view.getUint8(end-2), cksLo=view.getUint8(end-1);
-  let sum=0; for(let i=0;i<end-2;i++) sum+=view.getUint8(i); sum&=0xFFFF;
-  const ok = sum===((cksHi<<8)|cksLo);
-  const cmd=view.getUint8(3);
-  const plen=Math.max(0, end-6);     // bytes after the cmd byte, before checksum
-  const payload=new Uint8Array(plen);
-  for(let i=0;i<plen;i++) payload[i]=view.getUint8(4+i);
-  return {cmd, payload, ok};
-}
-
-/* ---------- status decode (best-effort; verify per unit) ---------- */
-function parseStatus(p){
-  // p = payload AFTER the command byte. Single-zone ~18 bytes.
-  // Layout corroborated across BrassMonkeyFridgeMonitor (CAR FRIDGE FREEZER v2.0.0)
-  // and johnelliott/alpicoold. Dynamic readings sit in the last 4 bytes.
-  const st={ raw:p, len:p.length };
-  if(p.length>=4){
-    st.locked      = !!p[0];
-    st.powered     = !!p[1];
-    st.runMode     = p[2];          // 0 Max, 1 Eco
-    st.battSaver   = p[3];          // 0 Low, 1 Mid, 2 High
-    st.target      = s8(p[4]);
-  }
-  if(p.length>=12){    // last-4 indexing self-adjusts if this 50 L reports a different length
-    st.maxTemp     = s8(p[5]);
-    st.minTemp     = s8(p[6]);
-    st.current     = s8(p[p.length-4]);
-    st.battPct     = p[p.length-3];
-    st.voltage     = p[p.length-2] + p[p.length-1]/10;
-  }
-  // temperature unit byte is model-dependent; expose raw, default °C
-  st.unit = (st.tempUnit===1) ? 'F' : 'C';
-  return st;
-}
-
-/* ====================================================================
-   Connection
-   ==================================================================== */
-async function connect(allDevices){
-  if(!navigator.bluetooth){
-    alert('Web Bluetooth is not available in this browser. Use Chrome or Edge (Android/desktop), or Bluefy on iOS.');
-    return;
-  }
-  try{
-    log('in', allDevices ? 'Requesting (all devices)…' : 'Requesting Alpicool device…');
-    const optionalServices=[SERVICE_UUID, 0xffe0, 0xfff0, 0x1800, 0x180a, 0x180f];
-    const opts = allDevices
-      ? { acceptAllDevices:true, optionalServices }
-      : { filters: NAME_PREFIXES.map(p=>({namePrefix:p})), optionalServices };
-    device = await navigator.bluetooth.requestDevice(opts);
-    device.addEventListener('gattserverdisconnected', onDisconnected);
-    setBanner('warn', `Connecting to ${device.name||'device'}…`);
-    server = await device.gatt.connect();
-
-    await discoverGatt(server);
-
-    const svc = await server.getPrimaryService(SERVICE_UUID);
-    writeChar  = await svc.getCharacteristic(WRITE_UUID);
-    notifyChar = await svc.getCharacteristic(NOTIFY_UUID);
-    await notifyChar.startNotifications();
-    notifyChar.addEventListener('characteristicvaluechanged', onNotify);
-
-    connected=true;
-    setBanner('on', `Connected · ${device.name||'fridge'}`);
-    $('conn-hint').style.display='none';
-    setControlsEnabled(true);
-    log('in', `Connected to ${device.name||'device'}.`);
-
-    await sendPayload([CMD.QUERY]);          // first read
-    startPolling();
-  }catch(e){
-    log('er', 'Connect failed: '+e.message);
-    if(e.name==='NotFoundError' && !allDevices){
-      if(confirm("No Alpicool-named device chosen.\n\nShow ALL nearby Bluetooth devices so you can pick your fridge manually?")){
-        return connect(true);
-      }
-    }
-    setBanner('', 'Disconnected');
-  }
-}
+/* Modbus CRC-16 (poly 0xA001) — shared, used by the power station. */
+function crc16(bytes){ let t=0xFFFF; for(const b of bytes){ t^=b; for(let i=0;i<8;i++) t=(t&1)?((t>>1)^0xA001):(t>>1);} return t&0xFFFF; }
 
 async function discoverGatt(server){
   const out=$('gatt-log'); out.innerHTML='';
   try{
-    const services=await server.getPrimaryServices();
-    for(const s of services){
-      const line=document.createElement('div');
-      line.innerHTML=`<span class="rx">service</span> ${s.uuid}`;
-      out.appendChild(line);
-      try{
-        const chars=await s.getCharacteristics();
-        for(const c of chars){
-          const props=Object.entries(c.properties).filter(([,v])=>v).map(([k])=>k).join(',');
-          const l=document.createElement('div');
-          l.innerHTML=`&nbsp;&nbsp;<span class="tx">char</span> ${c.uuid} <span class="in">[${props}]</span>`;
-          out.appendChild(l);
-        }
-      }catch(_){}
+    for(const s of await server.getPrimaryServices()){
+      const l=document.createElement('div'); l.innerHTML=`<span class="rx">service</span> ${s.uuid}`; out.appendChild(l);
+      try{ for(const c of await s.getCharacteristics()){
+        const props=Object.entries(c.properties).filter(([,v])=>v).map(([k])=>k).join(',');
+        const cl=document.createElement('div'); cl.innerHTML=`&nbsp;&nbsp;<span class="tx">char</span> ${c.uuid} <span class="in">[${props}]</span>`; out.appendChild(cl);
+      }}catch(_){}
     }
-  }catch(e){ out.innerHTML=`<span class="er">discovery error: ${e.message}</span>`; }
+  }catch(e){ out.innerHTML=`<span class="er">${e.message}</span>`; }
 }
 
-function onDisconnected(){
-  connected=false; stopPolling();
-  writeChar=notifyChar=server=null;
-  setBanner('', 'Disconnected');
-  $('conn-hint').style.display='';
-  setControlsEnabled(false);
-  log('er','Device disconnected.');
-}
+/* ===================================================================
+   FRIDGE module
+   =================================================================== */
+const Fridge = (()=>{
+  const SERVICE='00001234-0000-1000-8000-00805f9b34fb',
+        WRITE  ='00001235-0000-1000-8000-00805f9b34fb',
+        NOTIFY ='00001236-0000-1000-8000-00805f9b34fb';
+  const CMD={BIND:0x00,QUERY:0x01,SET:0x02,RESET:0x04,SET_LEFT:0x05,SET_RIGHT:0x06};
+  const PREFIX=['A1-','AK1-','AK2-','AK3-','WT-','K25','BC','Alpicool','CF','CX','NX','EK','T36','Brass'];
 
-async function disconnect(){
-  stopPolling();
-  try{ if(device&&device.gatt.connected) device.gatt.disconnect(); }catch(_){}
-  onDisconnected();
-}
+  let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
+  let busy=Promise.resolve(), lastStatus=null, lastPayload=null, settings=null, snapshot=null;
 
-/* ====================================================================
-   Send / receive
-   ==================================================================== */
-function sendPayload(payloadArr){
-  // Serialise writes; the module drops back-to-back packets otherwise.
-  busy = busy.then(async ()=>{
-    if(!writeChar) return;
-    const frame=buildFrame(payloadArr);
+  function buildFrame(payload){
+    const len=payload.length+2, body=[0xFE,0xFE,len,...payload];
+    let s=0; for(const b of body) s+=b; s&=0xFFFF;
+    return new Uint8Array([...body,(s>>8)&0xFF,s&0xFF]);
+  }
+  function parseFrame(view){
+    const n=view.byteLength; if(n<6) return null;
+    if(view.getUint8(0)!==0xFE||view.getUint8(1)!==0xFE) return null;
+    const len=view.getUint8(2), total=3+len, end=(total>=6&&total<=n)?total:n;
+    const hi=view.getUint8(end-2),lo=view.getUint8(end-1);
+    let sum=0; for(let i=0;i<end-2;i++) sum+=view.getUint8(i); sum&=0xFFFF;
+    const cmd=view.getUint8(3), plen=Math.max(0,end-6), p=new Uint8Array(plen);
+    for(let i=0;i<plen;i++) p[i]=view.getUint8(4+i);
+    return {cmd,payload:p,ok:sum===((hi<<8)|lo)};
+  }
+  function parseStatus(p){
+    const st={raw:p,len:p.length};
+    if(p.length>=4){ st.locked=!!p[0]; st.powered=!!p[1]; st.runMode=p[2]; st.battSaver=p[3]; st.target=s8(p[4]); }
+    if(p.length>=12){ st.maxTemp=s8(p[5]); st.minTemp=s8(p[6]); st.current=s8(p[p.length-4]); st.battPct=p[p.length-3]; st.voltage=p[p.length-2]+p[p.length-1]/10; }
+    st.unit='C';
+    return st;
+  }
+  function send(payload){
+    busy=busy.then(async ()=>{
+      if(!writeCh) return;
+      const f=buildFrame(payload);
+      try{ await writeCh.writeValue(f); log('tx','F→ '+hex(f)); }catch(e){ log('er','Fridge TX: '+e.message); }
+      await sleep(120);
+    });
+    return busy;
+  }
+  function onNotify(ev){
+    const v=ev.target.value;
+    const bytes=new Uint8Array(v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength));
+    log('rx','F← '+hex(bytes));
+    const f=parseFrame(v); if(!f) return;
+    if(!f.ok) log('er','  ↳ fridge checksum mismatch');
+    if(f.cmd===CMD.QUERY && f.payload.length>=4){
+      lastPayload=f.payload; lastStatus=parseStatus(f.payload);
+      settings=f.payload.slice(0,Math.max(0,f.payload.length-4));
+      updateUI(); renderBytes();
+    }
+  }
+  async function connect(all){
+    if(!navigator.bluetooth){ alert('Web Bluetooth not available. Use Chrome/Edge, or Bluefy on iOS.'); return; }
     try{
-      await writeChar.writeValue(frame);
-      log('tx','TX  '+hex(frame));
+      const optionalServices=[SERVICE,0xffe0,0xfff0,0x1800,0x180a,0x180f];
+      const opts=all?{acceptAllDevices:true,optionalServices}:{filters:PREFIX.map(p=>({namePrefix:p})),optionalServices};
+      log('in','Fridge: requesting device…');
+      dev=await navigator.bluetooth.requestDevice(opts);
+      dev.addEventListener('gattserverdisconnected',onDisc);
+      setState('warn','Connecting…');
+      const server=await dev.gatt.connect();
+      await discoverGatt(server);
+      const svc=await server.getPrimaryService(SERVICE);
+      writeCh=await svc.getCharacteristic(WRITE);
+      notifyCh=await svc.getCharacteristic(NOTIFY);
+      await notifyCh.startNotifications();
+      notifyCh.addEventListener('characteristicvaluechanged',onNotify);
+      connected=true; setState('on',dev.name||'Connected'); enable(true);
+      log('in','Fridge connected: '+(dev.name||'device'));
+      await send([CMD.QUERY]);
+      poll=setInterval(()=>{ if(connected) send([CMD.QUERY]); },2000);
     }catch(e){
-      log('er','TX failed: '+e.message);
+      log('er','Fridge connect: '+e.message);
+      if(e.name==='NotFoundError' && !all && confirm('No Alpicool device chosen. Show ALL Bluetooth devices?')) return connect(true);
+      setState('','Fridge disconnected');
     }
-    await sleep(120);
-  });
-  return busy;
-}
-
-function onNotify(ev){
-  const view=ev.target.value;
-  const bytes=new Uint8Array(view.buffer.slice(view.byteOffset, view.byteOffset+view.byteLength));
-  log('rx','RX  '+hex(bytes));
-  const f=parseFrame(view);
-  if(!f){ return; }
-  if(!f.ok) log('er','  ↳ checksum mismatch (parsed anyway)');
-  if(f.cmd===CMD.QUERY && f.payload.length>=4){
-    lastPayload=f.payload;
-    lastStatus=parseStatus(f.payload);
-    cachedSettings=f.payload.slice(0, Math.max(0, f.payload.length-4)); // drop dynamic tail
-    updateUI(lastStatus);
-    renderBytes(f.payload);
   }
-}
+  function onDisc(){ connected=false; if(poll){clearInterval(poll);poll=null;} writeCh=notifyCh=null; setState('','Fridge disconnected'); enable(false); log('er','Fridge disconnected.'); }
+  function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
-/* ====================================================================
-   Commands
-   ==================================================================== */
-async function cmdSetTarget(t){
-  await sendPayload([CMD.SET_LEFT, u8(t)]);
-  await sleep(150); await sendPayload([CMD.QUERY]);
-}
-// SET (0x02) rebuilds the whole settings block from the cached copy,
-// flips one byte, and echoes it back — exactly how the official app does it.
-async function cmdSetSettingByte(idx, val){
-  if(!cachedSettings){ log('er','No cached settings yet — query first.'); return; }
-  const s=Uint8Array.from(cachedSettings);
-  if(idx>=s.length){ log('er','Setting index out of range for this unit.'); return; }
-  s[idx]=u8(val);
-  await sendPayload([CMD.SET, ...s]);
-  await sleep(150); await sendPayload([CMD.QUERY]);
-}
-const cmdPower      = on => cmdSetSettingByte(1, on?1:0);
-const cmdRunMode    = m  => cmdSetSettingByte(2, m);
-const cmdBattSaver  = b  => cmdSetSettingByte(3, b);
-const cmdLock       = on => cmdSetSettingByte(0, on?1:0);
+  /* commands */
+  function curTarget(){ return lastStatus&&lastStatus.target!=null?lastStatus.target:Number($('f-slider').value); }
+  async function setTarget(t){ await send([CMD.SET_LEFT,u8(t)]); await sleep(150); await send([CMD.QUERY]); }
+  async function setByte(idx,val){ if(!settings){ log('er','Fridge: no cached settings yet'); return; } const s=Uint8Array.from(settings); if(idx>=s.length){ log('er','Fridge: index out of range'); return; } s[idx]=u8(val); await send([CMD.SET,...s]); await sleep(150); await send([CMD.QUERY]); }
 
-/* ====================================================================
-   Polling
-   ==================================================================== */
-function startPolling(){
-  stopPolling();
-  pollTimer=setInterval(()=>{ if(connected) sendPayload([CMD.QUERY]); }, POLL_MS);
-}
-function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
-
-/* ====================================================================
-   UI
-   ==================================================================== */
-function setBanner(state, text){
-  const d=$('conn-dot'); d.className='dot'+(state?(' '+state):'');
-  $('conn-text').textContent=text;
-}
-function setControlsEnabled(on){
-  const ids=['temp-up','temp-down','temp-slider','sw-power','sw-lock','bind-btn','raw-send-btn'];
-  ids.forEach(i=>{ const el=$(i); if(el) el.disabled=!on; });
-  document.querySelectorAll('#seg-mode button,#seg-batt button,#seg-unit button').forEach(b=>b.disabled=!on);
-  $('connect-btn').textContent = on ? '⏏️' : '🔌';
-  $('control-card').classList.toggle('disabled-overlay', !on);
-}
-
-function updateUI(st){
-  const u = st.unit==='F' ? '°F' : '°C';
-  $('m-unit').textContent=u; $('target-unit').textContent=u;
-  if(st.current!=null) $('m-current').textContent=st.current;
-  if(st.target!=null){ $('target-val').textContent=st.target; }
-  if(st.battPct!=null){ $('m-batt').textContent=st.battPct+'%';
-    const C=2*Math.PI*66; $('ring').style.strokeDashoffset = C*(1-st.battPct/100);
+  /* UI */
+  function setState(state,text){
+    setDot($('f-dot'),state); $('f-text').textContent=text;
+    setDot($('h-fridge-dot'),state); $('h-fridge-meta').textContent='Alpicool · '+(state==='on'?'connected':(state==='warn'?'connecting…':'not connected'));
+    $('f-connect').textContent=connected?'Disconnect':'Connect';
+    $('h-fridge-btn').textContent=connected?'Disconnect':'Connect';
   }
-  if(st.voltage!=null) $('m-volt').textContent=st.voltage.toFixed(1)+'V';
-  $('m-power').textContent = st.powered ? '● ON' : '○ OFF';
-  $('m-power').style.color = st.powered ? 'var(--good)' : 'var(--text-dim)';
-
-  // sliders/switches reflect state (without firing change handlers)
-  if(st.minTemp!=null && st.maxTemp!=null && st.minTemp<st.maxTemp){
-    $('temp-slider').min=st.minTemp; $('temp-slider').max=st.maxTemp;
+  function enable(on){
+    $('f-control-card').classList.toggle('disabled-overlay',!on);
+    ['f-temp-up','f-temp-down','f-slider','f-sw-power','f-sw-lock','f-bind'].forEach(i=>$(i).disabled=!on);
+    document.querySelectorAll('#f-seg-mode button,#f-seg-batt button,#f-seg-unit button').forEach(b=>b.disabled=!on);
   }
-  if(st.target!=null) $('temp-slider').value=st.target;
-  $('sw-power').checked=!!st.powered;
-  $('sw-lock').checked=!!st.locked;
-  setSeg('seg-mode', st.runMode);
-  setSeg('seg-batt', st.battSaver);
-}
-function setSeg(id, v){
-  document.querySelectorAll('#'+id+' button').forEach(b=>{
-    b.classList.toggle('active', Number(b.dataset.v)===Number(v));
-  });
-}
-
-function renderBytes(p){
-  const tb=$('byte-table').querySelector('tbody'); tb.innerHTML='';
-  const idxRow=document.createElement('tr');
-  const hexRow=document.createElement('tr');
-  const decRow=document.createElement('tr');
-  idxRow.innerHTML='<th>idx</th>'; hexRow.innerHTML='<th>hex</th>'; decRow.innerHTML='<th>s8</th>';
-  for(let i=0;i<p.length;i++){
-    idxRow.innerHTML+=`<th>${i}</th>`;
-    const changed = snapshot && snapshot[i]!==p[i] ? ' class="changed"' : '';
-    hexRow.innerHTML+=`<td${changed}>${p[i].toString(16).padStart(2,'0')}</td>`;
-    decRow.innerHTML+=`<td${changed}>${s8(p[i])}</td>`;
+  function updateUI(){
+    const st=lastStatus; if(!st) return;
+    const u=st.unit==='F'?'°F':'°C'; $('f-unit').textContent=u; $('f-target-unit').textContent=u;
+    if(st.current!=null) $('f-current').textContent=st.current;
+    if(st.target!=null){ $('f-target').textContent=st.target; $('f-slider').value=st.target; }
+    if(st.battPct!=null){ $('f-batt').textContent=st.battPct+'%'; $('f-ring').style.strokeDashoffset=(2*Math.PI*64)*(1-st.battPct/100); }
+    if(st.voltage!=null) $('f-volt').textContent=st.voltage.toFixed(1)+'V';
+    $('f-power-state').textContent=st.powered?'● ON':'○ OFF'; $('f-power-state').style.color=st.powered?'var(--good)':'var(--text-dim)';
+    if(st.minTemp!=null&&st.maxTemp!=null&&st.minTemp<st.maxTemp){ $('f-slider').min=st.minTemp; $('f-slider').max=st.maxTemp; }
+    $('f-sw-power').checked=!!st.powered; $('f-sw-lock').checked=!!st.locked;
+    setSeg('f-seg-mode',st.runMode); setSeg('f-seg-batt',st.battSaver);
+    $('h-fridge-meta').textContent=`Alpicool · ${st.current??'?'}° · ${st.battPct??'?'}%`;
   }
-  tb.append(idxRow,hexRow,decRow);
-
-  const f=$('field-list'); f.innerHTML='';
-  const add=(k,v)=>{ f.innerHTML+=`<div class="k">${k}</div><div>${v}</div>`; };
-  if(lastStatus){
-    add('Power', lastStatus.powered?'ON':'OFF');
-    add('Locked', lastStatus.locked?'yes':'no');
-    add('Run mode', ['Max','Eco'][lastStatus.runMode] ?? lastStatus.runMode);
-    add('Battery save', ['Low','Mid','High'][lastStatus.battSaver] ?? lastStatus.battSaver);
-    add('Target', lastStatus.target+'°');
-    if(lastStatus.current!=null) add('Current', lastStatus.current+'°');
-    if(lastStatus.battPct!=null) add('Battery', lastStatus.battPct+'%');
-    if(lastStatus.voltage!=null) add('Voltage', lastStatus.voltage.toFixed(1)+'V');
+  function renderBytes(){
+    const p=lastPayload; if(!p) return;
+    const tb=$('f-byte-table').querySelector('tbody'); tb.innerHTML='';
+    const ri=document.createElement('tr'), rh=document.createElement('tr'), rd=document.createElement('tr');
+    ri.innerHTML='<th>idx</th>'; rh.innerHTML='<th>hex</th>'; rd.innerHTML='<th>s8</th>';
+    for(let i=0;i<p.length;i++){ const ch=snapshot&&snapshot[i]!==p[i]?' class="changed"':'';
+      ri.innerHTML+=`<th>${i}</th>`; rh.innerHTML+=`<td${ch}>${p[i].toString(16).padStart(2,'0')}</td>`; rd.innerHTML+=`<td${ch}>${s8(p[i])}</td>`; }
+    tb.append(ri,rh,rd);
   }
-}
+  function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',Number(b.dataset.v)===Number(v))); }
 
-/* ====================================================================
-   Wire up controls
-   ==================================================================== */
-function currentTarget(){ return lastStatus && lastStatus.target!=null ? lastStatus.target : Number($('temp-slider').value); }
+  return { connect, disconnect, isConnected:()=>connected, curTarget, setTarget, setByte,
+           bind:()=>send([CMD.BIND]), sendRaw:bytes=>send(bytes), snapshot:()=>{ if(lastPayload){snapshot=Uint8Array.from(lastPayload); renderBytes(); log('in','Fridge snapshot taken.');} },
+           clearSnap:()=>{ snapshot=null; renderBytes(); }, hasStatus:()=>!!lastStatus };
+})();
 
-$('temp-up').onclick   = ()=>{ const t=currentTarget()+1; $('target-val').textContent=t; cmdSetTarget(t); };
-$('temp-down').onclick = ()=>{ const t=currentTarget()-1; $('target-val').textContent=t; cmdSetTarget(t); };
-$('temp-slider').onchange = e=>{ const t=Number(e.target.value); $('target-val').textContent=t; cmdSetTarget(t); };
-$('sw-power').onchange = e=>cmdPower(e.target.checked);
-$('sw-lock').onchange  = e=>cmdLock(e.target.checked);
-document.querySelectorAll('#seg-mode button').forEach(b=>b.onclick=()=>cmdRunMode(Number(b.dataset.v)));
-document.querySelectorAll('#seg-batt button').forEach(b=>b.onclick=()=>cmdBattSaver(Number(b.dataset.v)));
-document.querySelectorAll('#seg-unit button').forEach(b=>b.onclick=()=>cmdSetSettingByte(unitByteIndex(), Number(b.dataset.v)));
-function unitByteIndex(){ return 11; } // model-dependent; adjust via diagnostics
-$('bind-btn').onclick  = ()=>sendPayload([CMD.BIND]);
+/* ===================================================================
+   POWER module (Fossibot / Aferiy)
+   =================================================================== */
+const Power = (()=>{
+  const SERVICE='0000a002-0000-1000-8000-00805f9b34fb',
+        WRITE  ='0000c304-0000-1000-8000-00805f9b34fb',
+        NOTIFY ='0000c305-0000-1000-8000-00805f9b34fb';
+  const PREFIX=['POWER','AFERIY','FOSSIBOT','SYDPOWER'];
+  const READ_STATUS  =[0x11,0x04,0x00,0x00,0x00,0x50];   // +CRC -> poll every 2s
+  const READ_SETTINGS=[0x11,0x03,0x00,0x00,0x00,0x50];   // +CRC -> once on connect
+  // Allowed write values (firmware does NOT validate — enforce here).
+  const SAFE={20:{min:1,max:20},24:[0,1],25:[0,1],26:[0,1],27:[0,1,2,3],57:[0,1],
+              59:[0,180,300,600,1800],60:[0,480,960,1440],61:[0,480,960,1440],62:[0,3,5,10,30],
+              63:{min:0,max:1440},66:{min:0,max:1000},67:{min:0,max:1000},68:[5,10,30,60,480],13:[1,2,3,4,5],64:[1]};
 
-$('connect-btn').onclick = ()=>{ connected ? disconnect() : connect(false); };
+  let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
+  let busy=Promise.resolve(), regs=[], settings=[];
 
-$('raw-send-btn').onclick = ()=>{
-  const txt=$('raw-input').value.trim();
-  if(!txt) return;
+  function withCRC(payload){ const c=crc16(payload); return new Uint8Array([...payload,(c>>8)&0xFF,c&0xFF]); }
+  function send(bytes){
+    busy=busy.then(async ()=>{
+      if(!writeCh) return;
+      const arr=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+      try{ await writeCh.writeValue(arr); log('tx','P→ '+hex(arr)); }catch(e){ log('er','Power TX: '+e.message); }
+      await sleep(180);
+    });
+    return busy;
+  }
+  // Write a single holding register (Modbus fn 0x06), with safety gate.
+  function setReg(reg,val){
+    reg=Number(reg); val=Number(val);
+    if(reg===68 && val===0){ log('er','BLOCKED: reg 68 = 0 can permanently brick the device. Refused.'); alert('Blocked: writing 0 to register 68 can permanently brick the power station.'); return Promise.resolve(); }
+    const rule=SAFE[reg];
+    if(rule){ if(Array.isArray(rule)){ if(!rule.includes(val)){ log('er',`Power: ${val} not allowed for reg ${reg}`); return Promise.resolve(); } }
+              else val=clamp(val,rule.min,rule.max); }
+    log('in',`Power: reg ${reg} = ${val}`);
+    return send(withCRC([0x11,0x06,(reg>>8)&0xFF,reg&0xFF,(val>>8)&0xFF,val&0xFF]));
+  }
+  function getReg(i){ return regs[i]||0; }
+
+  function parsePacket(view){
+    const n=view.byteLength; if(n<8) return null;
+    const opcode=view.getUint8(1);
+    const out=[]; for(let i=0;i<90;i++){ const off=6+i*2; out.push(off+1<n?view.getUint16(off,false):0); }
+    return {opcode,regs:out};
+  }
+  function onNotify(ev){
+    const v=ev.target.value;
+    const bytes=new Uint8Array(v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength));
+    if(bytes.length<=24) log('rx','P← '+hex(bytes));   // skip noisy full dumps in the log
+    const p=parsePacket(v); if(!p) return;
+    if(p.opcode===0x03){ settings=p.regs; }
+    else { regs=p.regs; updateUI(); renderRegs(); }
+  }
+  async function connect(all){
+    if(!navigator.bluetooth){ alert('Web Bluetooth not available. Use Chrome/Edge, or Bluefy on iOS.'); return; }
+    try{
+      const optionalServices=[SERVICE,0xa003,0x1800,0x180a,0x180f];
+      const opts=all?{acceptAllDevices:true,optionalServices}:{filters:PREFIX.map(p=>({namePrefix:p})),optionalServices};
+      log('in','Power: requesting device…');
+      dev=await navigator.bluetooth.requestDevice(opts);
+      dev.addEventListener('gattserverdisconnected',onDisc);
+      setState('warn','Connecting…');
+      const server=await dev.gatt.connect();
+      await sleep(400);
+      await discoverGatt(server);
+      const svc=await server.getPrimaryService(SERVICE);
+      writeCh=await svc.getCharacteristic(WRITE);
+      notifyCh=await svc.getCharacteristic(NOTIFY);
+      notifyCh.addEventListener('characteristicvaluechanged',onNotify);
+      await notifyCh.startNotifications();
+      connected=true; setState('on',dev.name||'Connected'); enable(true);
+      log('in','Power connected: '+(dev.name||'device'));
+      poll=setInterval(()=>{ if(connected) send(withCRC(READ_STATUS)); },2000);
+      await send(withCRC(READ_STATUS));
+      await sleep(500);
+      await send(withCRC(READ_SETTINGS));
+    }catch(e){
+      log('er','Power connect: '+e.message);
+      if(e.name==='NotFoundError' && !all && confirm('No Fossibot/Aferiy device chosen. Show ALL Bluetooth devices?')) return connect(true);
+      setState('','Power station disconnected');
+    }
+  }
+  function onDisc(){ connected=false; if(poll){clearInterval(poll);poll=null;} writeCh=notifyCh=null; setState('','Power station disconnected'); enable(false); log('er','Power disconnected.'); }
+  function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
+
+  /* UI */
+  function setState(state,text){
+    setDot($('p-dot'),state); $('p-text').textContent=text;
+    setDot($('h-power-dot'),state); $('h-power-meta').textContent='Fossibot · '+(state==='on'?'connected':(state==='warn'?'connecting…':'not connected'));
+    $('p-connect').textContent=connected?'Disconnect':'Connect';
+    $('h-power-btn').textContent=connected?'Disconnect':'Connect';
+  }
+  function enable(on){
+    $('p-control-card').classList.toggle('disabled-overlay',!on);
+    ['p-ac','p-dc','p-usb','p-silent','p-charge-limit','p-discharge-limit','p-ac-standby','p-dc-standby','p-sys-standby'].forEach(i=>$(i).disabled=!on);
+    document.querySelectorAll('#p-led button,#p-charge button').forEach(b=>b.disabled=!on);
+  }
+  function updateUI(){
+    const soc=getReg(56)/10, inW=getReg(6)||(getReg(3)+getReg(4)), outW=getReg(20)||getReg(39);
+    const flags=getReg(41), err=getReg(8), sf=getReg(48);
+    $('p-soc').textContent=soc.toFixed(0); $('p-in').textContent=inW+'W'; $('p-out').textContent=outW+'W';
+    $('p-ring').style.strokeDashoffset=(2*Math.PI*64)*(1-clamp(soc,0,100)/100);
+    const charging=inW>0 && inW>=outW;
+    const mins=charging?getReg(58):getReg(59);
+    $('p-time').textContent=mins>0?`${charging?'Full in':'Empty in'} ${Math.floor(mins/60)}h ${mins%60}m`:'';
+    let state= err===79?'Protection': err===78?'Inverter fault': err>0?('Error '+err): (sf&0x8000)?'Charging':(sf&0x4000)?'Standby':(outW>0?'Discharging':'Idle');
+    $('p-state').textContent=state;
+    // outputs (live, from reg41 bits)
+    $('p-ac').checked=!!(flags&2048); $('p-dc').checked=!!(flags&1024); $('p-usb').checked=!!(flags&512);
+    setSeg('p-led',getReg(27)); setSeg('p-charge',getReg(13));
+    $('p-silent').checked=!!getReg(57);
+    const cl=Math.round(getReg(67)/10), dl=Math.round(getReg(66)/10);
+    if(document.activeElement!==$('p-charge-limit')){ $('p-charge-limit').value=cl; $('p-cl-val').textContent=cl+'%'; }
+    if(document.activeElement!==$('p-discharge-limit')){ $('p-discharge-limit').value=dl; $('p-dl-val').textContent=dl+'%'; }
+    $('h-power-meta').textContent=`Fossibot · ${soc.toFixed(0)}% · ${charging?'+'+inW:'-'+outW}W`;
+  }
+  function renderRegs(){
+    const tb=$('p-reg-table').querySelector('tbody'); tb.innerHTML='';
+    const named={3:'AC in W',4:'DC in W',6:'In W',8:'Error',13:'Chg rate',20:'Out W',27:'LED',41:'Flags',42:'Prot',48:'Status',54:'Cap',56:'SOC',57:'Silent',58:'ToFull',59:'ToEmpty',66:'DischLim',67:'ChgLim'};
+    for(let i=0;i<90;i+=2){
+      const tr=document.createElement('tr');
+      for(const j of [i,i+1]){ if(j>=90) break;
+        tr.innerHTML+=`<th>${j}${named[j]?' '+named[j]:''}</th><td>${regs[j]||0}</td>`; }
+      tb.appendChild(tr);
+    }
+  }
+  function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',Number(b.dataset.v)===Number(v))); }
+
+  return { connect, disconnect, isConnected:()=>connected, setReg,
+           sendRaw:bytes=>send(withCRC(bytes)), sendRawNoCRC:bytes=>send(bytes) };
+})();
+
+/* ===================================================================
+   Wire up UI
+   =================================================================== */
+// Fridge controls
+$('f-temp-up').onclick   =()=>{ const t=Fridge.curTarget()+1; $('f-target').textContent=t; Fridge.setTarget(t); };
+$('f-temp-down').onclick =()=>{ const t=Fridge.curTarget()-1; $('f-target').textContent=t; Fridge.setTarget(t); };
+$('f-slider').onchange   =e=>{ const t=Number(e.target.value); $('f-target').textContent=t; Fridge.setTarget(t); };
+$('f-sw-power').onchange  =e=>Fridge.setByte(1,e.target.checked?1:0);
+$('f-sw-lock').onchange   =e=>Fridge.setByte(0,e.target.checked?1:0);
+document.querySelectorAll('#f-seg-mode button').forEach(b=>b.onclick=()=>Fridge.setByte(2,Number(b.dataset.v)));
+document.querySelectorAll('#f-seg-batt button').forEach(b=>b.onclick=()=>Fridge.setByte(3,Number(b.dataset.v)));
+document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setByte(11,Number(b.dataset.v))); // unit byte model-dependent
+$('f-bind').onclick=()=>Fridge.bind();
+$('f-connect').onclick=()=>Fridge.isConnected()?Fridge.disconnect():Fridge.connect(false);
+$('h-fridge-btn').onclick=()=>Fridge.isConnected()?Fridge.disconnect():Fridge.connect(false);
+
+// Power controls
+$('p-ac').onchange =e=>Power.setReg(26,e.target.checked?1:0);
+$('p-dc').onchange =e=>Power.setReg(25,e.target.checked?1:0);
+$('p-usb').onchange=e=>Power.setReg(24,e.target.checked?1:0);
+$('p-silent').onchange=e=>Power.setReg(57,e.target.checked?1:0);
+document.querySelectorAll('#p-led button').forEach(b=>b.onclick=()=>Power.setReg(27,Number(b.dataset.v)));
+document.querySelectorAll('#p-charge button').forEach(b=>b.onclick=()=>Power.setReg(13,Number(b.dataset.v)));
+$('p-charge-limit').oninput=e=>$('p-cl-val').textContent=e.target.value+'%';
+$('p-charge-limit').onchange=e=>Power.setReg(67,Number(e.target.value)*10);
+$('p-discharge-limit').oninput=e=>$('p-dl-val').textContent=e.target.value+'%';
+$('p-discharge-limit').onchange=e=>Power.setReg(66,Number(e.target.value)*10);
+$('p-ac-standby').onchange=e=>Power.setReg(60,Number(e.target.value));
+$('p-dc-standby').onchange=e=>Power.setReg(61,Number(e.target.value));
+$('p-sys-standby').onchange=e=>{ if(e.target.value) Power.setReg(68,Number(e.target.value)); };
+$('p-connect').onclick=()=>Power.isConnected()?Power.disconnect():Power.connect(false);
+$('h-power-btn').onclick=()=>Power.isConnected()?Power.disconnect():Power.connect(false);
+
+// Diagnostics
+$('log-clear').onclick=()=>$('log').innerHTML='';
+$('f-snap').onclick=()=>Fridge.snapshot();
+$('f-snap-clear').onclick=()=>Fridge.clearSnap();
+let rawTarget='fridge';
+function setRawHint(){ $('raw-hint').textContent = rawTarget==='fridge'
+  ? 'Fridge: enter payload only (e.g. "01" query, "05 ec" set −20°). FE FE/len/checksum added automatically.'
+  : 'Power: enter the Modbus register write payload without CRC (e.g. "11 06 00 1a 00 01" AC on). CRC added automatically.'; }
+document.querySelectorAll('#raw-target button').forEach(b=>b.onclick=()=>{ rawTarget=b.dataset.v; document.querySelectorAll('#raw-target button').forEach(x=>x.classList.toggle('active',x===b)); setRawHint(); });
+setRawHint();
+$('raw-send-btn').onclick=()=>{
+  const txt=$('raw-input').value.trim(); if(!txt) return;
   const bytes=txt.split(/[\s,]+/).filter(Boolean).map(h=>parseInt(h,16));
   if(bytes.some(isNaN)){ log('er','Invalid hex'); return; }
-  sendPayload(bytes);
+  if(rawTarget==='fridge') Fridge.sendRaw(bytes);
+  else { if(bytes.length>=4 && bytes[1]===0x06 && bytes[2]===0 && bytes[3]===68 && bytes[4]===0 && bytes[5]===0){ log('er','BLOCKED: reg 68 = 0 can brick the device.'); return; } Power.sendRawNoCRC(crcAppend(bytes)); }
 };
+function crcAppend(bytes){ const c=crc16(bytes); return [...bytes,(c>>8)&0xFF,c&0xFF]; }
 
-/* diagnostics buttons */
-$('log-clear').onclick=()=>$('log').innerHTML='';
-$('log-copy').onclick=()=>navigator.clipboard?.writeText($('log').innerText);
-$('snap-btn').onclick=()=>{ if(lastPayload){ snapshot=Uint8Array.from(lastPayload); log('in','Snapshot taken — now change something on the fridge.'); renderBytes(lastPayload);} };
-$('snap-clear').onclick=()=>{ snapshot=null; if(lastPayload) renderBytes(lastPayload); };
+// Tabs
+function showView(v){ ['home','fridge','power','diag'].forEach(x=>{ $('view-'+x).classList.toggle('active',x===v); $('tab-'+x).classList.toggle('active',x===v); }); }
+['home','fridge','power','diag'].forEach(v=>$('tab-'+v).onclick=()=>showView(v));
 
-/* tabs */
-function showView(v){
-  $('view-control').style.display    = v==='control'?'':'none';
-  $('view-diagnostics').style.display= v==='diag'?'':'none';
-  $('tab-control').classList.toggle('active', v==='control');
-  $('tab-diag').classList.toggle('active', v==='diag');
-}
-$('tab-control').onclick=()=>showView('control');
-$('tab-diag').onclick=()=>showView('diag');
-
-/* theme */
+// Theme
 const THEMES=['ocean','midnight','arctic','terminal'];
-function setTheme(t){ document.body.dataset.theme=t; localStorage.setItem('alpicool-theme',t);
-  document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
-}
-$('theme-btn').onclick=()=>{
-  const cur=document.body.dataset.theme;
-  setTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length]);
-};
-setTheme(localStorage.getItem('alpicool-theme')||'ocean');
+function setTheme(t){ document.body.dataset.theme=t; localStorage.setItem('van-theme',t);
+  document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.body).getPropertyValue('--bg-body').trim(); }
+$('theme-btn').onclick=()=>setTheme(THEMES[(THEMES.indexOf(document.body.dataset.theme)+1)%THEMES.length]);
+setTheme(localStorage.getItem('van-theme')||'ocean');
 
-/* service worker */
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
-}
+// Service worker
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 </script>
 </body>
 </html>
