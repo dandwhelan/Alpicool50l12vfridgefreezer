@@ -8,7 +8,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<title>Campervan Control</title>
+<title>SmartVan</title>
 <style>
 :root{
   --bg-body:#0b1f33; --bg-card:#12304d; --bg-card-2:#0e273f; --bg-input:#0a1c2e;
@@ -151,7 +151,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 
 <header>
   <span class="logo">🚐</span>
-  <h1>Campervan Control<small>Web Bluetooth · offline · no cloud</small></h1>
+  <h1>SmartVan<small>Web Bluetooth · offline · no cloud</small></h1>
   <button class="icon-btn" id="install-btn" title="Install app" style="display:none">⬇️</button>
   <button class="icon-btn" id="theme-btn" title="Theme">🎨</button>
 </header>
@@ -178,7 +178,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
     </div>
     <div class="card" id="install-card" style="display:none">
       <h2>📲 Install app</h2>
-      <p class="muted" style="margin-top:0" id="install-text">Add Campervan Control to your home screen to launch it full-screen and use it offline — no app store, no account.</p>
+      <p class="muted" style="margin-top:0" id="install-text">Add SmartVan to your home screen to launch it full-screen and use it offline — no app store, no account.</p>
       <button class="btn primary" id="install-card-btn">⬇️ Install on this device</button>
       <p class="muted" id="install-ios-hint" style="display:none">On iOS, open in Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. (Bluetooth control itself needs the <b>Bluefy</b> browser.)</p>
     </div>
@@ -354,7 +354,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 <script>
 "use strict";
 /* ===================================================================
-   Campervan Control — two independent Web Bluetooth systems:
+   SmartVan — two independent Web Bluetooth systems:
      • Fridge  (Alpicool / Brass Monkey)  service 1234 / 1235 / 1236
      • Power   (Fossibot / Aferiy, Modbus) service a002 / c304 / c305
    =================================================================== */
@@ -856,7 +856,7 @@ if(isStandalone()){
   $('install-card').style.display='block';
   $('install-card-btn').style.display='none';
   $('install-ios-hint').style.display='block';
-  $('install-text').textContent='Install Campervan Control to launch it full-screen and use it offline.';
+  $('install-text').textContent='Install SmartVan to launch it full-screen and use it offline.';
 }
 </script>
 </body>

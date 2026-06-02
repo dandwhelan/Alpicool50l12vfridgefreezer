@@ -1,6 +1,6 @@
 {
-    "name": "Campervan Control",
-    "short_name": "Campervan",
+    "name": "SmartVan",
+    "short_name": "SmartVan",
     "description": "Offline Web Bluetooth control for an Alpicool fridge freezer and a Fossibot power station. No account, no internet.",
     "start_url": "./",
     "scope": "./",
