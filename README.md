@@ -3,7 +3,7 @@
 Offline, app-free, cloud-free control of a campervan's two Bluetooth systems from one phone-friendly
 Progressive Web App:
 
-- ❄️ **Alpicool / Brass Monkey** 12V fridge freezer
+- ❄️ **Alpicool / Brass Monkey** 12V fridge freezer *(+ many rebrands — see [COMPATIBILITY.md](COMPATIBILITY.md))*
 - 🔋 **Fossibot / Aferiy** portable power station
 
 Built on the **Web Bluetooth API** — same architecture as
@@ -91,6 +91,7 @@ status map is best-effort pending validation on the physical 50 L (use Diagnosti
 | `manifest.json` · `service-worker.js` · `icon.svg` | PWA install + offline |
 | `PROTOCOL.md` | fridge (Alpicool) protocol |
 | `POWER_PROTOCOL.md` | power station (Fossibot) protocol |
+| `COMPATIBILITY.md` | which fridge brands/rebrands work with this app |
 | `task.md` | roadmap / status |
 
 ---
