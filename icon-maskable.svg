@@ -9,23 +9,23 @@
        so no rounded corners here and all art stays inside the ~80% safe zone. -->
   <rect width="512" height="512" fill="url(#bg)"/>
   <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
-    <!-- snowflake (fridge) -->
-    <g stroke="#2f9be0" stroke-width="16" stroke-linecap="round" fill="none" transform="translate(170 256)">
-      <g id="arm">
-        <line x1="0" y1="0" x2="0" y2="-108"/>
-        <line x1="0" y1="-108" x2="-26" y2="-82"/>
-        <line x1="0" y1="-108" x2="26" y2="-82"/>
-        <line x1="0" y1="-66" x2="-22" y2="-44"/>
-        <line x1="0" y1="-66" x2="22" y2="-44"/>
-      </g>
-      <use href="#arm" transform="rotate(60)"/>
-      <use href="#arm" transform="rotate(120)"/>
-      <use href="#arm" transform="rotate(180)"/>
-      <use href="#arm" transform="rotate(240)"/>
-      <use href="#arm" transform="rotate(300)"/>
+    <!-- "smart" connectivity arcs -->
+    <g fill="none" stroke="#23c3b3" stroke-width="16" stroke-linecap="round">
+      <path d="M196 196 A 84 84 0 0 1 316 196"/>
+      <path d="M222 168 A 48 48 0 0 1 290 168"/>
     </g>
-    <!-- lightning bolt (power) -->
-    <path d="M352 132 L300 280 L344 280 L312 392 L408 244 L356 244 Z"
-          fill="#23c3b3" stroke="#23c3b3" stroke-width="10" stroke-linejoin="round"/>
+    <circle cx="256" cy="150" r="13" fill="#23c3b3"/>
+    <!-- campervan -->
+    <path d="M96 360 L96 300 Q96 280 116 278 L296 278 Q318 278 330 292 L360 318 L404 326
+             Q416 330 416 346 L416 360 Z" fill="#eef4fb"/>
+    <path d="M96 332 L416 332 L416 360 L96 360 Z" fill="#2f9be0"/>
+    <rect x="120" y="292" width="86" height="34" rx="8" fill="#0b1f33"/>
+    <rect x="214" y="292" width="78" height="34" rx="8" fill="#0b1f33"/>
+    <path d="M302 292 L324 294 L350 316 L306 316 Z" fill="#0b1f33"/>
+    <circle cx="406" cy="338" r="6" fill="#ffb020"/>
+    <circle cx="160" cy="362" r="30" fill="#0b1f33"/>
+    <circle cx="160" cy="362" r="13" fill="#eef4fb"/>
+    <circle cx="360" cy="362" r="30" fill="#0b1f33"/>
+    <circle cx="360" cy="362" r="13" fill="#eef4fb"/>
   </g>
 </svg>

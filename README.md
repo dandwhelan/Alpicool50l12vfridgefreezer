@@ -85,6 +85,42 @@ status map is best-effort pending validation on the physical 50 L (use Diagnosti
 
 ---
 
+## Compatible fridges
+
+This app speaks the **Alpicool "CAR FRIDGE FREEZER" BLE protocol** (GATT service `1234`,
+`FE FE … sum16` frames). The same hardware is rebranded widely, so it works with far more than
+just Alpicool. Advertised BLE name usually starts with **`A1-`, `AK1-`, `AK2-`, `AK3-`, `WT-`,
+`K25`, `BC…`**.
+
+> **The one reliable test:** does it pair with the official *CAR FRIDGE FREEZER* app **and** show
+> service **`1234`** (write `1235` / notify `1236`) under **Diagnostics → GATT discovery**? If yes,
+> this app drives it. A different app, or generic `ffe0/ffe1` (HM‑10), means a different lineage.
+
+**✅ Confirmed (same app + protocol)**
+
+| Brand | Notes |
+|:------|:------|
+| **Alpicool** | The OEM/original. The 50 L dual-zone this repo was built against is an Alpicool. |
+| **Brass Monkey** | AU/NZ rebrand (Jaycar, Bunnings, Road Tech Marine). Same hardware + app. |
+| **BougeRV** (CR-series) | Named in the official app listing. ⚠️ Some BougeRV models use a different (Wancool/SECOP) stack — verify with the test. |
+
+**🟡 Likely same-platform rebrands (verify with the test above)**
+
+Setpower · JoyTutus · Bodega · Euhomy · Vevor · Costway · Aspenora · Ausranvik · AstroAI ·
+Kalamera · Domende — and other budget Amazon car-fridge brands. Commonly described as
+Alpicool-made or sharing the platform, but the GATT `1234` check is the only proof.
+
+**❌ Different ecosystem (won't work)**
+
+ICECO (and ICECO-built Setpower) · ARB · Dometic · National Luna · Engel · EcoFlow Glacier ·
+Anker — all use their own controllers/apps/protocols.
+
+> Full details, sources, and how to report a new one: **[COMPATIBILITY.md](COMPATIBILITY.md)**.
+> On the power side, the app targets **Fossibot / Aferiy / SYDPOWER** stations (name prefixes
+> `POWER`, `AFERIY`, `FOSSIBOT`, `SYDPOWER`).
+
+---
+
 ## Project layout
 
 | File | Purpose |
