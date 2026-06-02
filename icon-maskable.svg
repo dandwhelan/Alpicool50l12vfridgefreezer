@@ -5,7 +5,9 @@
       <stop offset="1" stop-color="#0b1f33"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Full-bleed background: maskable icons are cropped to the platform shape. -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
   <g fill="none" stroke="#26cdbd" stroke-width="14" stroke-linecap="round">
     <path d="M102 150 A 67 67 0 0 1 198 150"/>
     <path d="M121 123 A 40 40 0 0 1 179 123"/>
@@ -18,4 +20,5 @@
   <path d="M300 276 L320 278 L346 308 L304 308 Z" fill="#0c2c47"/>
   <circle cx="162" cy="350" r="30" fill="#0b1f33"/><circle cx="162" cy="350" r="12" fill="#f2f7fc"/>
   <circle cx="356" cy="350" r="30" fill="#0b1f33"/><circle cx="356" cy="350" r="12" fill="#f2f7fc"/>
+  </g>
 </svg>

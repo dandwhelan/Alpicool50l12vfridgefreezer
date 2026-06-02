@@ -8,7 +8,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<title>Campervan Control</title>
+<title>SmartVan</title>
 <style>
 :root{
   --bg-body:#0b1f33; --bg-card:#12304d; --bg-card-2:#0e273f; --bg-input:#0a1c2e;
@@ -151,7 +151,8 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 
 <header>
   <span class="logo">🚐</span>
-  <h1>Campervan Control<small>Web Bluetooth · offline · no cloud</small></h1>
+  <h1>SmartVan<small>Web Bluetooth · offline · no cloud</small></h1>
+  <button class="icon-btn" id="install-btn" title="Install app" style="display:none">⬇️</button>
   <button class="icon-btn" id="theme-btn" title="Theme">🎨</button>
 </header>
 
@@ -175,6 +176,13 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
         <button class="btn primary" style="width:auto;padding:10px 16px" id="h-power-btn">Connect</button>
       </div>
     </div>
+    <div class="card" id="install-card" style="display:none">
+      <h2>📲 Install app</h2>
+      <p class="muted" style="margin-top:0" id="install-text">Add SmartVan to your home screen to launch it full-screen and use it offline — no app store, no account.</p>
+      <button class="btn primary" id="install-card-btn">⬇️ Install on this device</button>
+      <p class="muted" id="install-ios-hint" style="display:none">On iOS, open in Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. (Bluetooth control itself needs the <b>Bluefy</b> browser.)</p>
+    </div>
+
     <div class="card">
       <h2>About</h2>
       <p class="muted" style="margin-top:0">Two independent Bluetooth systems, controlled from one app. The fridge (Alpicool) and the power station (Fossibot) each connect separately — connect whichever you're near.</p>
@@ -346,7 +354,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 <script>
 "use strict";
 /* ===================================================================
-   Campervan Control — two independent Web Bluetooth systems:
+   SmartVan — two independent Web Bluetooth systems:
      • Fridge  (Alpicool / Brass Monkey)  service 1234 / 1235 / 1236
      • Power   (Fossibot / Aferiy, Modbus) service a002 / c304 / c305
    =================================================================== */
@@ -804,8 +812,52 @@ function setTheme(t){ document.body.dataset.theme=t; localStorage.setItem('van-t
 $('theme-btn').onclick=()=>setTheme(THEMES[(THEMES.indexOf(document.body.dataset.theme)+1)%THEMES.length]);
 setTheme(localStorage.getItem('van-theme')||'ocean');
 
-// Service worker
+// Service worker — enables offline use and (with the manifest) makes the app installable.
 if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+
+/* ---------- Install as a PWA (Android / desktop Chrome / Edge) ----------
+   Chrome fires `beforeinstallprompt` when the app meets the install criteria
+   (served over https or localhost, has a manifest + service worker + icons).
+   We stash the event and reveal our own install affordances, then trigger the
+   native prompt on tap. Everything here is local — no network calls. */
+let deferredPrompt=null;
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: minimal-ui)').matches||window.navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+
+function showInstallUI(show){
+  $('install-btn').style.display = show?'grid':'none';
+  $('install-card').style.display = show?'block':'none';
+}
+
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();            // stop Chrome's default mini-infobar…
+  deferredPrompt=e;              // …so we can prompt on the user's tap instead.
+  if(!isStandalone()){ showInstallUI(true); log('in','App is installable — tap ⬇️ to add to your home screen.'); }
+});
+
+async function doInstall(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  log('in','Install prompt: '+outcome);
+  deferredPrompt=null;
+  if(outcome==='accepted') showInstallUI(false);
+}
+$('install-btn').onclick=doInstall;
+$('install-card-btn').onclick=doInstall;
+
+window.addEventListener('appinstalled', ()=>{ deferredPrompt=null; showInstallUI(false); log('in','App installed. You can launch it from your home screen.'); });
+
+// Already installed / launched standalone → never nag about installing.
+if(isStandalone()){
+  showInstallUI(false);
+} else if(isIOS()){
+  // iOS Safari never fires beforeinstallprompt — show manual Add-to-Home-Screen steps.
+  $('install-card').style.display='block';
+  $('install-card-btn').style.display='none';
+  $('install-ios-hint').style.display='block';
+  $('install-text').textContent='Install SmartVan to launch it full-screen and use it offline.';
+}
 </script>
 </body>
 </html>
