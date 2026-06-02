@@ -17,6 +17,14 @@ to each device over BLE.
 
 ---
 
+## AI Assistant Integration
+This project provides specific guidelines and docs for AI assistants to collaborate:
+- [Claude](claude.md)
+- [Gemini](gemini.md)
+- [Codex](codex.md)
+
+---
+
 ## Features
 
 **Home** — both devices at a glance, each with its own connect/disconnect.

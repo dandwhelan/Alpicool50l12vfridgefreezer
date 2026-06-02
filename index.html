@@ -422,11 +422,13 @@ const Fridge = (()=>{
   }
   function parseStatus(p){
     const st={raw:p,len:p.length};
-    if(p.length>=31){ 
+    if(p.length>=4){ 
       st.locked=!!p[0]; 
       st.powered=!!p[1]; 
       st.zoneMode=p[2]; // 0=Fridge, 1=Freezer
       st.battSaver=p[3]; // 0=Low, 1=Mid, 2=High
+    }
+    if(p.length>=31){ 
       st.L_target=s8(p[4]); 
       st.L_max=s8(p[5]); 
       st.L_min=s8(p[6]);
@@ -459,19 +461,24 @@ const Fridge = (()=>{
     log('rx','F← '+hex(bytes));
     const f=parseFrame(v); if(!f) return;
     if(!f.ok) log('er','  ↳ fridge checksum mismatch');
-    if(f.cmd===CMD.QUERY && f.payload.length>=31){
+    if(f.cmd===CMD.QUERY && f.payload.length>=4){
       lastPayload=f.payload; lastStatus=parseStatus(f.payload);
-      // Reconstruct the 25-byte SET settings payload from the 31-byte STATUS payload
-      settings = new Uint8Array(25);
-      for(let i=0; i<14; i++) settings[i] = f.payload[i];
-      for(let i=0; i<8; i++)  settings[14+i] = f.payload[18+i];
-      settings[22] = f.payload[12] === 2 ? 32 : 0;
-      settings[23] = f.payload.length >= 29 ? f.payload[28] : 3;
-      settings[24] = f.payload.length >= 30 ? f.payload[29] : 0;
-      if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (dual-zone detected)`); sizeLogged=true; }
+      
+      if(f.payload.length>=31) {
+        // Reconstruct the 25-byte SET settings payload from the 31-byte STATUS payload
+        settings = new Uint8Array(25);
+        for(let i=0; i<14; i++) settings[i] = f.payload[i];
+        for(let i=0; i<8; i++)  settings[14+i] = f.payload[18+i];
+        settings[22] = f.payload[12] === 2 ? 32 : 0;
+        settings[23] = f.payload.length >= 29 ? f.payload[28] : 3;
+        settings[24] = f.payload.length >= 30 ? f.payload[29] : 0;
+        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (dual-zone detected)`); sizeLogged=true; }
+      } else {
+        // fallback to original behavior for short payloads during pairing
+        settings=f.payload.slice(0,Math.max(0,f.payload.length-4));
+        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (short payload, possibly waiting for bind)`); sizeLogged=true; }
+      }
       updateUI(); renderBytes();
-    } else if(f.cmd===CMD.QUERY) {
-      log('er',`  ↳ fridge short payload: ${f.payload.length} bytes. Dual-zone UI requires 31 bytes.`);
     } else {
       log('in',`  ↳ fridge replied to cmd 0x${f.cmd.toString(16).padStart(2,'0')} ${f.ok?'(accepted)':'(bad crc)'}`);
     }
