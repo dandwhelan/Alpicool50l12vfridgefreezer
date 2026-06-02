@@ -52,7 +52,9 @@ snapshot/change-recorder, and the live power-station register table.
 2. Turn on Bluetooth, stay in range.
 3. Go to **Home**, tap **Connect** on the fridge and/or the power station (use "show all devices"
    if it isn't obviously named).
-4. Optional: Chrome menu → **Add to Home screen** to install it.
+4. Install it: tap the **⬇️ Install** button (in the header / Home screen) when it
+   appears, or use Chrome menu → **Add to Home screen**. Once installed it launches
+   full-screen and runs entirely offline.
 
 ### Run locally
 Web Bluetooth needs a secure context (HTTPS **or** `localhost`):
@@ -88,7 +90,7 @@ status map is best-effort pending validation on the physical 50 L (use Diagnosti
 | File | Purpose |
 |:-----|:--------|
 | `index.html` | the whole app (Home / Fridge / Power / Diagnostics, inline CSS+JS) |
-| `manifest.json` · `service-worker.js` · `icon.svg` | PWA install + offline |
+| `manifest.json` · `service-worker.js` · `icon.svg` · `icon-*.png` | PWA install (incl. maskable icon) + offline |
 | `PROTOCOL.md` | fridge (Alpicool) protocol |
 | `POWER_PROTOCOL.md` | power station (Fossibot) protocol |
 | `COMPATIBILITY.md` | which fridge brands/rebrands work with this app |
