@@ -97,9 +97,11 @@ status map is best-effort pending validation on the physical 50 L (use Diagnosti
 
 ## Status
 
-🟡 Protocols implemented and CRC-verified for both devices. **Not yet validated against the
-physical hardware** — see `task.md`. The power-station writes are gated by a safety whitelist, but
-treat untested controls with care.
+🟢 **Fridge protocol verified against a real `btsnoop_hci.log` capture** of the official app
+driving the A1-FFFF… 50 L dual-zone unit — connection/sync, command codes and the dual-zone
+byte map are confirmed (current-temp offsets remain best-effort; see `PROTOCOL.md`). 🟡 The
+power-station protocol is CRC-verified but not yet validated on hardware; its writes are gated
+by a safety whitelist — treat untested controls with care. See `task.md`.
 
 ## Credits
 
