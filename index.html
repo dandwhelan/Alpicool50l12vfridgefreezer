@@ -422,26 +422,23 @@ const Fridge = (()=>{
   }
   function parseStatus(p){
     const st={raw:p,len:p.length};
-    if(p.length>=4){ 
-      st.locked=!!p[0]; 
-      st.powered=!!p[1]; 
-      st.zoneMode=p[2]; // 0=Fridge, 1=Freezer
-      st.battSaver=p[3]; // 0=Low, 1=Mid, 2=High
+    if(p.length>=4){
+      st.locked=!!p[0];   // keypad lock
+      st.powered=!!p[1];  // compressor on/off
+      st.runMode=p[2];    // 0=Max, 1=Eco
+      st.battSaver=p[3];  // 0=Low, 1=Mid, 2=High
     }
-    if(p.length>=31){ 
-      st.L_target=s8(p[4]); 
-      st.L_max=s8(p[5]); 
-      st.L_min=s8(p[6]);
-      st.unit = p[12]===2?'F':'C'; 
-      st.L_current = s8(p[16]);
-      st.R_current = s8(p[17]);
-      if (st.unit === 'F') {
-         st.L_current = Math.round(st.L_current*9/5 + 32);
-         st.R_current = Math.round(st.R_current*9/5 + 32);
-      }
-      st.R_target=s8(p[18]);
-      st.R_max=s8(p[19]);
-      st.R_min=s8(p[20]);
+    // Verified against a real Alpicool 50 L dual-zone capture: the query (0x01)
+    // reply carries a 30-byte payload (after the cmd byte). NOTE the gate is >=30,
+    // not >=31 — the previous off-by-one meant every status fell through to the
+    // "short payload" branch and the UI never populated (looked stuck pairing).
+    if(p.length>=30){
+      st.unit = p[12]===2?'F':'C';
+      st.L_target  = s8(p[4]);   // fridge setpoint (cmd 0x05) — in the displayed unit
+      st.R_target  = s8(p[18]);  // freezer setpoint (cmd 0x06) — in the displayed unit
+      st.L_current = s8(p[16]);  // fridge current temp — reported in °C
+      st.R_current = s8(p[26]);  // freezer current temp (best-effort offset)
+      if(st.unit==='F') st.L_current = Math.round(st.L_current*9/5 + 32);
     }
     return st;
   }
@@ -449,7 +446,16 @@ const Fridge = (()=>{
     busy=busy.then(async ()=>{
       if(!writeCh) return;
       const f=buildFrame(payload);
-      try{ const m=await smartWrite(writeCh,f); log('tx',`F→ ${hex(f)} (${m})`); }
+      try{
+        // The official app splits every frame into ≤20-byte ATT writes — the
+        // safe payload size when the ATT MTU isn't negotiated up (23-3=20).
+        // The fridge reassembles by the FE FE / length header, so we do the
+        // same; a single oversized write is silently dropped on a 20-byte link
+        // and is the reason multi-byte settings (power/lock/unit) never stuck.
+        let m='resp';
+        for(let off=0; off<f.length; off+=20) m=await smartWrite(writeCh, f.slice(off, off+20));
+        log('tx',`F→ ${hex(f)} (${m}${f.length>20?', chunked':''})`);
+      }
       catch(e){ log('er','Fridge TX FAILED: '+e.message); }
       await sleep(160);
     });
@@ -464,19 +470,26 @@ const Fridge = (()=>{
     if(f.cmd===CMD.QUERY && f.payload.length>=4){
       lastPayload=f.payload; lastStatus=parseStatus(f.payload);
       
-      if(f.payload.length>=31) {
-        // Reconstruct the 25-byte SET settings payload from the 31-byte STATUS payload
+      if(f.payload.length>=30) {
+        // Recover the 25-byte SET (0x02) settings block from the 30-byte status
+        // payload by stripping the 5 interleaved dynamic readings. Verified
+        // byte-for-byte against a known-good capture (a SET echoed back matches
+        // this reconstruction exactly, differing only in the one byte changed):
+        //   settings[0..13]  = status[0..13]
+        //   settings[14..21] = status[18..25]   (status[14..17] = dynamic)
+        //   settings[22..24] = status[27..29]   (status[26]     = dynamic)
         settings = new Uint8Array(25);
-        for(let i=0; i<14; i++) settings[i] = f.payload[i];
-        for(let i=0; i<8; i++)  settings[14+i] = f.payload[18+i];
-        settings[22] = f.payload[12] === 2 ? 32 : 0;
-        settings[23] = f.payload.length >= 29 ? f.payload[28] : 3;
-        settings[24] = f.payload.length >= 30 ? f.payload[29] : 0;
-        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (dual-zone detected)`); sizeLogged=true; }
+        for(let i=0; i<14; i++) settings[i]    = f.payload[i];
+        for(let i=0; i<8;  i++) settings[14+i] = f.payload[18+i];
+        settings[22] = f.payload[27];
+        settings[23] = f.payload[28];
+        settings[24] = f.payload[29];
+        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (dual-zone)`); sizeLogged=true; }
       } else {
-        // fallback to original behavior for short payloads during pairing
+        // Unexpectedly short payload — keep a best-effort copy so the raw byte
+        // table still works, but the full settings controls need the 30-byte status.
         settings=f.payload.slice(0,Math.max(0,f.payload.length-4));
-        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (short payload, possibly waiting for bind)`); sizeLogged=true; }
+        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (short/unknown)`); sizeLogged=true; }
       }
       updateUI(); renderBytes();
     } else {
@@ -515,19 +528,18 @@ const Fridge = (()=>{
   function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
   /* commands */
-  async function setLeftTarget(t){ 
-    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
-    settings[4] = u8(t); 
-    await send([CMD.SET_LEFT, ...settings]); 
-    await sleep(150); 
-    await send([CMD.QUERY]); 
+  // Temperature is set with a dedicated single-byte command — NOT the full
+  // settings block. Verified from capture: fridge "FE FE 04 05 <t> ..",
+  // freezer "FE FE 04 06 <t> ..". Value is a signed int8 in the displayed unit.
+  async function setLeftTarget(t){
+    await send([CMD.SET_LEFT, u8(t)]);
+    await sleep(150);
+    await send([CMD.QUERY]);
   }
-  async function setRightTarget(t){ 
-    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
-    settings[14] = u8(t); 
-    await send([CMD.SET_RIGHT, ...settings]); 
-    await sleep(150); 
-    await send([CMD.QUERY]); 
+  async function setRightTarget(t){
+    await send([CMD.SET_RIGHT, u8(t)]);
+    await sleep(150);
+    await send([CMD.QUERY]);
   }
   async function setByte(idx,val){ 
     if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
@@ -560,7 +572,8 @@ const Fridge = (()=>{
     $('f-sw-power').textContent=st.powered?'Power ON':'Power OFF'; 
     $('f-sw-power').style.color=st.powered?'var(--good)':'var(--text-main)';
     $('f-sw-lock').checked=!!st.locked;
-    setSeg('f-seg-zone',st.zoneMode); setSeg('f-seg-batt',st.battSaver); setSeg('f-seg-unit',st.unit==='F'?2:1);
+    // f-seg-zone is a cosmetic "active zone" UI preference, not a device value.
+    setSeg('f-seg-batt',st.battSaver); setSeg('f-seg-unit',st.unit==='F'?2:1);
     $('h-fridge-meta').textContent=`Alpicool · ${st.L_current??'?'}° / ${st.R_current??'?'}°`;
   }
   function renderBytes(){
@@ -722,7 +735,11 @@ $('f-R-up').onclick   =()=>{ const t=Number($('f-R-target').textContent)+1; $('f
 $('f-R-down').onclick =()=>{ const t=Number($('f-R-target').textContent)-1; $('f-R-target').textContent=t; Fridge.setRightTarget(t); };
 $('f-sw-power').onclick  =()=>{ const p=$('f-sw-power').textContent.includes('ON')?0:1; Fridge.setByte(1,p); };
 $('f-sw-lock').onchange   =e=>Fridge.setByte(0,e.target.checked?1:0);
-document.querySelectorAll('#f-seg-zone button').forEach(b=>b.onclick=()=>Fridge.setByte(2,Number(b.dataset.v)));
+// "Active Zone UI" is a cosmetic view preference — it must NOT write to the
+// device (status idx2 is the Max/Eco run mode, not a zone selector).
+document.querySelectorAll('#f-seg-zone button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#f-seg-zone button').forEach(x=>x.classList.toggle('active',x===b));
+});
 document.querySelectorAll('#f-seg-batt button').forEach(b=>b.onclick=()=>Fridge.setByte(3,Number(b.dataset.v)));
 document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setByte(12,Number(b.dataset.v))); // unit byte is p[12] for dual zone
 $('f-bind').onclick=()=>Fridge.bind();

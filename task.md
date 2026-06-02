@@ -15,11 +15,13 @@
 - [x] Power register table + raw command sender in diagnostics
 - [x] Docs: PROTOCOL.md (fridge) + POWER_PROTOCOL.md (power)
 
-## 🔲 Phase 3 — validate on real hardware
-**Fridge (needs the physical 50 L):**
-- [ ] Confirm GATT profile `1234/1235/1236` (vs `ffe0/ffe1`)
-- [ ] Confirm status byte map (current temp / battery / voltage offsets, °C/°F flag idx)
-- [ ] Confirm `02` settings-block layout; single- vs dual-zone
+## 🟡 Phase 3 — validate on real hardware
+**Fridge — verified from a first-party `btsnoop_hci.log` capture of the A1-FFFF… 50 L:**
+- [x] Confirmed GATT profile `1234` (notify `1236`/val 0x0003, write `1235`/val 0x0006, + `fff1`)
+- [x] Confirmed it's **dual-zone**: fridge target via `05`, freezer target via `06`
+- [x] Confirmed `02` settings-block layout (25 bytes; dynamic readings interleaved) + °C/°F idx 12
+- [x] Fixed connect/sync: 30-byte status gate (was off-by-one `31`), no auto-bind, 20-byte write chunking
+- [ ] Confirm current-temp offsets (status idx 16 & 26) on hardware via Snapshot
 
 **Power (needs the Fossibot):**
 - [ ] Confirm connect + live telemetry (SoC, watts, time)
