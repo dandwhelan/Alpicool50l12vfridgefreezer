@@ -105,7 +105,8 @@ byte, and resend it as a `02`.
 
 30-byte payload **after** the `01` command byte (frame `FE FE 21 01 …`, total 36 bytes,
 fragmented over BLE as 20 + 16). The 25-byte settings block is interleaved with 5 dynamic
-reading bytes (idx 14–17 and 26).
+reading bytes (idx 14–17 and 26); only idx14/15 (fridge) and idx26 (freezer) are the actual
+current-temperature readings — idx16/17 is live but unidentified.
 
 | Idx | Field | Type | Notes |
 |:----|:------|:-----|:------|
@@ -117,19 +118,24 @@ reading bytes (idx 14–17 and 26).
 | 5–11 | *settings* | mixed | limits / hysteresis / start-delay / calibration |
 | 12 | `unit` | uint8 | `1` = °C · `2` = °F |
 | 13 | *settings* | uint8 | (`00` observed) |
-| **14–17** | *dynamic* | mixed | inserted readings; idx 16/17 = fridge current temp (whole + tenths) |
-| 16–17 | `fridge_current` | int8 + u8 | fridge current temp = `idx16 + idx17/10` °C (e.g. `0d 04` = 13.4°C) |
+| **14–15** | `fridge_current` | int8 + u8 | fridge current temp = `idx14 + idx15/10` °C |
+| 16–17 | *dynamic* | mixed | live but unidentified (not fridge/freezer current) |
 | **18** | **`freezer_target`** | int8 | freezer setpoint (set by `06`), in displayed unit |
 | 19–25 | *settings* | mixed | freezer-side limits / calibration |
-| **26–27** | `freezer_current` | int8 + u8 | freezer current temp = `idx26 + idx27/10` °C |
+| **26** | `freezer_current` | int8 | freezer current temp = `idx26` °C, whole degrees only |
+| 27 | *settings* | uint8 | part of the settings block (`settings[22]`) — not a tenths reading |
 | 28–29 | *settings* | mixed | tail (`03 00` observed) |
 
-> **Confirmed on real hardware** (live session on the `A1-FFFF…` 50 L): replaying the status
-> stream, `idx16/17` held steady at the fridge temp while `idx26/27` dropped on its own as the
-> freezer cooled — and a cross-check against an earlier capture showed a clean `12.9 → 13.0`
-> tenths step. Both current temps are reported in **°C** regardless of the display unit, so the
-> app converts them when °F is selected. Setpoints, unit and the lock/power/run/batt flags all
-> matched the official app exactly.
+> **Corrected against real hardware** (on-site byte-age debugging, `A1-FFFF…` 50 L): idx16/17
+> was originally taken as the fridge current temp, but it read a fixed ~4.9°C high vs the
+> fridge's own physical display (`12.9` vs an actual `8°C`) while idx16/17 itself *did* update
+> live, so the earlier "held steady" observation pointed at the wrong bytes rather than a stuck
+> sensor. idx14 (+ idx15 tenths) matches the physical display exactly. The freezer only has a
+> single live byte at idx26 — idx27 is static settings data (echoed unchanged into the `02`
+> settings block, see §5) that happened to read `00` in earlier captures, masking the bug.
+> Both current temps are reported in **°C** regardless of the display unit, so the app converts
+> them when °F is selected. Setpoints, unit and the lock/power/run/batt flags all matched the
+> official app exactly.
 
 ---
 
