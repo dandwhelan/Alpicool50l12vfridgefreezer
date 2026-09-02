@@ -325,7 +325,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 
     <div class="card">
       <h2>Fridge — status bytes</h2>
-      <p class="muted" style="margin-top:0">Snapshot, change one setting on the fridge, watch which byte highlights — confirms the map for your 50&nbsp;L.</p>
+      <p class="muted" style="margin-top:0">Snapshot, change one setting on the fridge, watch which byte highlights — confirms the map for your 50&nbsp;L. The <b>last Δ</b> row shows how long ago each byte last changed value — leave this open to see if a sensor byte (fridge current = idx 16/17, freezer current = idx 26/27) is actually updating or stuck.</p>
       <div style="overflow:auto"><table class="bytes" id="f-byte-table"><tbody><tr><td class="in">Connect fridge & query…</td></tr></tbody></table></div>
       <div class="btn-grid" style="margin-top:10px"><button class="btn ghost" id="f-snap">📸 Snapshot</button><button class="btn ghost" id="f-snap-clear">Clear highlight</button></div>
     </div>
@@ -412,6 +412,7 @@ const Fridge = (()=>{
 
   let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
   let busy=Promise.resolve(), lastStatus=null, lastPayload=null, settings=null, snapshot=null, sizeLogged=false;
+  let byteChangeAt=null; // per-index ms timestamp of last observed change, for on-site liveness debugging
 
   function buildFrame(payload){
     const len=payload.length+2, body=[0xFE,0xFE,len,...payload];
@@ -481,8 +482,18 @@ const Fridge = (()=>{
     const f=parseFrame(v); if(!f) return;
     if(!f.ok) log('er','  ↳ fridge checksum mismatch');
     if(f.cmd===CMD.QUERY && f.payload.length>=4){
+      // Track when each byte last actually changed value — lets a stuck sensor
+      // (e.g. current-temp byte never moving) be diagnosed live in the Diag tab
+      // instead of needing a laptop/Wireshark capture.
+      const now=Date.now(), prev=lastPayload;
+      if(!byteChangeAt || byteChangeAt.length!==f.payload.length) byteChangeAt=new Array(f.payload.length).fill(0);
+      const changedIdx=[];
+      for(let i=0;i<f.payload.length;i++){
+        if(!prev || prev[i]!==f.payload[i]){ byteChangeAt[i]=now; if(prev) changedIdx.push(i); }
+      }
+      if(changedIdx.length) log('in','  ↳ bytes changed: '+changedIdx.join(', '));
       lastPayload=f.payload; lastStatus=parseStatus(f.payload);
-      
+
       if(f.payload.length>=30) {
         // Recover the 25-byte SET (0x02) settings block from the 30-byte status
         // payload by stripping the 5 interleaved dynamic readings. Verified
@@ -537,7 +548,7 @@ const Fridge = (()=>{
       setState('','Fridge disconnected');
     }
   }
-  function onDisc(){ connected=false; if(poll){clearInterval(poll);poll=null;} writeCh=notifyCh=null; setState('','Fridge disconnected'); enable(false); log('er','Fridge disconnected.'); }
+  function onDisc(){ connected=false; if(poll){clearInterval(poll);poll=null;} writeCh=notifyCh=null; byteChangeAt=null; setState('','Fridge disconnected'); enable(false); log('er','Fridge disconnected.'); }
   function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
   /* commands */
@@ -592,11 +603,15 @@ const Fridge = (()=>{
   function renderBytes(){
     const p=lastPayload; if(!p) return;
     const tb=$('f-byte-table').querySelector('tbody'); tb.innerHTML='';
-    const ri=document.createElement('tr'), rh=document.createElement('tr'), rd=document.createElement('tr');
-    ri.innerHTML='<th>idx</th>'; rh.innerHTML='<th>hex</th>'; rd.innerHTML='<th>s8</th>';
+    const ri=document.createElement('tr'), rh=document.createElement('tr'), rd=document.createElement('tr'), ra=document.createElement('tr');
+    ri.innerHTML='<th>idx</th>'; rh.innerHTML='<th>hex</th>'; rd.innerHTML='<th>s8</th>'; ra.innerHTML='<th>last Δ</th>';
+    const now=Date.now();
     for(let i=0;i<p.length;i++){ const ch=snapshot&&snapshot[i]!==p[i]?' class="changed"':'';
-      ri.innerHTML+=`<th>${i}</th>`; rh.innerHTML+=`<td${ch}>${p[i].toString(16).padStart(2,'0')}</td>`; rd.innerHTML+=`<td${ch}>${s8(p[i])}</td>`; }
-    tb.append(ri,rh,rd);
+      ri.innerHTML+=`<th>${i}</th>`; rh.innerHTML+=`<td${ch}>${p[i].toString(16).padStart(2,'0')}</td>`; rd.innerHTML+=`<td${ch}>${s8(p[i])}</td>`;
+      const at=byteChangeAt&&byteChangeAt[i]; const age=at?Math.round((now-at)/1000)+'s':'never';
+      ra.innerHTML+=`<td>${age}</td>`;
+    }
+    tb.append(ri,rh,rd,ra);
   }
   function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',Number(b.dataset.v)===Number(v))); }
 
