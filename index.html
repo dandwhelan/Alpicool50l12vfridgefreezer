@@ -725,13 +725,17 @@ const Power = (()=>{
   }
   function updateUI(){
     const soc=getReg(56)/10, inW=getReg(6)||(getReg(3)+getReg(4)), outW=getReg(20)||getReg(39);
-    const flags=getReg(41), err=getReg(8), sf=getReg(48);
+    const flags=getReg(41), err=getReg(8), prot=getReg(42), sf=getReg(48);
     $('p-soc').textContent=soc.toFixed(0); $('p-in').textContent=inW+'W'; $('p-out').textContent=outW+'W';
     $('p-ring').style.strokeDashoffset=(2*Math.PI*64)*(1-clamp(soc,0,100)/100);
     const charging=inW>0 && inW>=outW;
     const mins=charging?getReg(58):getReg(59);
     $('p-time').textContent=mins>0?`${charging?'Full in':'Empty in'} ${Math.floor(mins/60)}h ${mins%60}m`:'';
-    let state= err===79?'Protection': err===78?'Inverter fault': err>0?('Error '+err): (sf&0x8000)?'Charging':(sf&0x4000)?'Standby':(outW>0?'Discharging':'Idle');
+    // Reg 8 is only a fault at 78/79 — other non-zero values occur during normal
+    // operation and must not be surfaced as errors (see fossibot-bluetooth PROTOCOL.md §6).
+    // Reg 79 splits into hardware failure vs. temp/safety protection via reg42 bits 13-14.
+    const criticalFault=(prot&0x6000)>0;
+    let state= err===78?'Inverter fault': err===79?(criticalFault?'System failure':'Temp/safety protection'): (sf&0x8000)?'Charging':(sf&0x4000)?'Standby':(outW>0?'Discharging':'Idle');
     $('p-state').textContent=state;
     // outputs (live, from reg41 bits)
     $('p-ac').checked=!!(flags&2048); $('p-dc').checked=!!(flags&1024); $('p-usb').checked=!!(flags&512);
