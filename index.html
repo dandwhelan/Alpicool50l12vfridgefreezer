@@ -728,7 +728,10 @@ const Power = (()=>{
     const flags=getReg(41), err=getReg(8), prot=getReg(42), sf=getReg(48);
     $('p-soc').textContent=soc.toFixed(0); $('p-in').textContent=inW+'W'; $('p-out').textContent=outW+'W';
     $('p-ring').style.strokeDashoffset=(2*Math.PI*64)*(1-clamp(soc,0,100)/100);
-    const charging=inW>0 && inW>=outW;
+    // Derive charging from reg 48's own flag rather than an inW/outW heuristic, so this
+    // agrees with the "Charging"/"Standby" state text below instead of drifting from it
+    // (e.g. both idle at 0 W previously still reported "Empty in …").
+    const charging=!!(sf&0x8000);
     const mins=charging?getReg(58):getReg(59);
     $('p-time').textContent=mins>0?`${charging?'Full in':'Empty in'} ${Math.floor(mins/60)}h ${mins%60}m`:'';
     // Reg 8 is only a fault at 78/79 — other non-zero values occur during normal
