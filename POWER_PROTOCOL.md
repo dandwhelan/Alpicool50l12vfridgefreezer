@@ -65,12 +65,12 @@ function crc16(b){ let t=0xFFFF; for(const x of b){ t^=x;
 | Reg | Field | Scaling |
 |:----|:------|:--------|
 | 6 | Total input W | raw (fallback reg3 + reg4) |
-| 8 | Error code | 0 ok · 78 inverter fault · 79 temp/safety |
+| 8 | Error code | Only **78** (inverter fault) and **79** (AC charging interrupted) are real faults. Other non-zero values occur during normal operation and must **not** be shown as errors. |
 | 13 | AC charge rate | level 1–5 |
 | 20 | Total output W | raw |
 | 27 | LED mode | 0 off · 1 on · 2 flash · 3 SOS |
-| 41 | Output flags | USB = bit 9 · DC = bit 10 · AC = bit 11 · LED = bit 12 |
-| 42 | Protection mask | bits 13–14 (`& 0x6000`) = critical fault |
+| 41 | Output flags | USB = bit 9 · DC = bit 10 · AC = bit 11 (mask `0x0200`/`0x0400`/`0x0800`, as read by `index.html`) |
+| 42 | Protection mask | bits 13–14 (`& 0x6000`) = critical fault — mixed-purpose, **only meaningful when reg 8 == 79** (bits 13-14 are also set during normal operation) |
 | 48 | Status flags | `0x8000` charging · `0x4000` standby |
 | 54 | Battery full capacity | 0.1 Ah |
 | 56 | **Main SoC** | **% = raw / 10** |
@@ -79,6 +79,20 @@ function crc16(b){ let t=0xFFFF; for(const x of b){ t^=x;
 | 59 | Time to empty | minutes |
 | 66 | Discharge limit | % × 10 |
 | 67 | Charge limit | % × 10 |
+
+### Error/state classification (avoiding false positives)
+
+Reg 8 is **not** a generic "nonzero = error" flag — some firmware reports other nonzero
+values (e.g. `136`) during normal operation. Only `78` and `79` are confirmed faults:
+
+- `err === 78` → **Inverter fault**.
+- `err === 79` → check reg 42 bits 13–14 (`& 0x6000`): non-zero → **System failure**
+  (critical hardware), zero → **Temp/safety protection** (cold/hot lockout).
+- Anything else (including `0`) → **not an error**; fall back to reg 48's charging/standby
+  flags, same as before.
+
+Reg 42's critical-fault bits are otherwise set during healthy operation, so they must only
+be consulted once reg 8 == 79 — never used standalone as an error indicator.
 
 ---
 
@@ -93,16 +107,20 @@ function crc16(b){ let t=0xFFFF; for(const x of b){ t^=x;
 | AC charge rate | 13 | 1–5 |
 | Max charge current (A) | 20 | 1–20 |
 | Silent charging | 57 | 0 / 1 |
-| Screen timeout | 59 | 0, 180, 300, 600, 1800 |
+| USB standby (sec) | 59 | 0, 180, 300, 600, 1800 |
 | AC standby (min) | 60 | 0, 480, 960, 1440 |
 | DC standby (min) | 61 | 0, 480, 960, 1440 |
-| USB standby | 62 | 0, 3, 5, 10, 30 |
+| Screen timeout (sec) | 62 | 0, 180, 300, 600, 1800 |
 | Discharge limit | 66 | 0–1000 (0.1 %) |
 | Charge limit | 67 | 0–1000 (0.1 %) |
 | **Idle shutdown (min)** | 68 | **5, 10, 30, 60, 480 — NEVER 0** |
 | Power off now | 64 | 1 |
 
 The app refuses any value outside these sets, and specifically blocks `reg 68 = 0`.
+
+**Menu:** all of the above are exposed under Power → Advanced timers, including the
+**USB standby** (reg 59) and **Screen timeout** (reg 62) selects — previously present in the
+safety whitelist but not wired up to any control, and swapped with each other's values.
 
 ---
 

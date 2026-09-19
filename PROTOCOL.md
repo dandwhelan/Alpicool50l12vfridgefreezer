@@ -199,3 +199,23 @@ FE FE 1C 02 00 00 01 02 04 08 00 02 00 00 00 00 01 00 F0 F4 | EC 02 00 00 01 00 
   Modbus-style frames) — see `POWER_PROTOCOL.md`.
 - Not yet observed on the wire: `locked`, `startDelay`, TC/hysteresis edits, `hotTarget`, `reset`,
   and `warn/sleep/partition/disinfect` (layout comes from the app code only).
+
+## 8. Notes from on-hardware validation (merged from earlier work)
+
+An earlier pass validated this protocol on the physical `A1-FFFF…` 50 L dual-zone unit against a
+first-party `btsnoop_hci.log` capture, and cross-checked it against
+**klightspeed/BrassMonkeyFridgeMonitor** (app v2.0.0) and **johnelliott/alpicoold**.
+
+- The status payload is **30 bytes after the cmd byte**, so parsers must gate on `>= 30`. A `>= 31`
+  gate (an old off-by-one) sends every status to a "waiting for bind" fallback and the unit looks
+  stuck pairing.
+- Do **not** auto-send `bind` on connect; the official app sends `query` immediately.
+- Chunk every write to ≤ 20 bytes; a single oversized write is silently dropped.
+- Extra GATT characteristic seen on the unit: `fff1` (unused by the app).
+
+**Superseded by the decompiled app (§4):** that pass inferred the current-temperature bytes by
+elimination and concluded idx 16/17 "read ~4.9° high" and idx 15 was tenths. The app's
+`fetchData()` shows idx 15 is **battery %** and idx 16/17 is **supply voltage** (12.9 V — the
+"4.9° high" reading), while zone-1 current is **idx 14 (whole degrees, no tenths)** and zone-2
+current is **idx 26**. Current temps are sent **in the display unit** (°F mode capture: idx 14 = 61
+for 16 °C, idx 26 = 55 for 13 °C), not always °C.

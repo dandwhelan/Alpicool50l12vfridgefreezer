@@ -8,7 +8,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<title>Campervan Control</title>
+<title>SmartVan</title>
 <style>
 :root{
   --bg-body:#0b1f33; --bg-card:#12304d; --bg-card-2:#0e273f; --bg-input:#0a1c2e;
@@ -151,7 +151,8 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 
 <header>
   <span class="logo">🚐</span>
-  <h1>Campervan Control<small>Web Bluetooth · offline · no cloud</small></h1>
+  <h1>SmartVan<small>Web Bluetooth · offline · no cloud</small></h1>
+  <button class="icon-btn" id="install-btn" title="Install app" style="display:none">⬇️</button>
   <button class="icon-btn" id="theme-btn" title="Theme">🎨</button>
 </header>
 
@@ -175,6 +176,13 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
         <button class="btn primary" style="width:auto;padding:10px 16px" id="h-power-btn">Connect</button>
       </div>
     </div>
+    <div class="card" id="install-card" style="display:none">
+      <h2>📲 Install app</h2>
+      <p class="muted" style="margin-top:0" id="install-text">Add SmartVan to your home screen to launch it full-screen and use it offline — no app store, no account.</p>
+      <button class="btn primary" id="install-card-btn">⬇️ Install on this device</button>
+      <p class="muted" id="install-ios-hint" style="display:none">On iOS, open in Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. (Bluetooth control itself needs the <b>Bluefy</b> browser.)</p>
+    </div>
+
     <div class="card">
       <h2>About</h2>
       <p class="muted" style="margin-top:0">Two independent Bluetooth systems, controlled from one app. The fridge (Alpicool) and the power station (Fossibot) each connect separately — connect whichever you're near.</p>
@@ -288,6 +296,8 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
         <summary>Advanced timers</summary>
         <div class="row"><div class="lab">AC standby</div><select id="p-ac-standby"><option value="0">Never</option><option value="480">8h</option><option value="960">16h</option><option value="1440">24h</option></select></div>
         <div class="row"><div class="lab">DC standby</div><select id="p-dc-standby"><option value="0">Never</option><option value="480">8h</option><option value="960">16h</option><option value="1440">24h</option></select></div>
+        <div class="row"><div class="lab">USB standby</div><select id="p-usb-standby"><option value="0">Never</option><option value="180">3m</option><option value="300">5m</option><option value="600">10m</option><option value="1800">30m</option></select></div>
+        <div class="row"><div class="lab">Screen timeout</div><select id="p-screen-timeout"><option value="0">Never</option><option value="180">3m</option><option value="300">5m</option><option value="600">10m</option><option value="1800">30m</option></select></div>
         <div class="row" style="display:block">
           <div class="lab">Whole-unit idle shutdown</div>
           <div class="dangerbox" style="margin:8px 0">⚠️ Never set this to 0 — writing 0 to register 68 has <b>permanently bricked</b> units. This control only offers safe values.</div>
@@ -317,7 +327,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 
     <div class="card">
       <h2>Fridge — status bytes</h2>
-      <p class="muted" style="margin-top:0">Snapshot, change one setting on the fridge, watch which byte highlights — confirms the map for your 50&nbsp;L.</p>
+      <p class="muted" style="margin-top:0">Snapshot, change one setting on the fridge, watch which byte highlights — confirms the map for your 50&nbsp;L. The <b>last Δ</b> row shows how long ago each byte last changed value — leave this open to see if a sensor byte (fridge current = idx 14, freezer current = idx 26) is actually updating or stuck.</p>
       <div style="overflow:auto"><table class="bytes" id="f-byte-table"><tbody><tr><td class="in">Connect fridge & query…</td></tr></tbody></table></div>
       <div class="btn-grid" style="margin-top:10px"><button class="btn ghost" id="f-snap">📸 Snapshot</button><button class="btn ghost" id="f-snap-clear">Clear highlight</button></div>
     </div>
@@ -346,7 +356,7 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
 <script>
 "use strict";
 /* ===================================================================
-   Campervan Control — two independent Web Bluetooth systems:
+   SmartVan — two independent Web Bluetooth systems:
      • Fridge  (Alpicool / Brass Monkey)  service 1234 / 1235 / 1236
      • Power   (Fossibot / Aferiy, Modbus) service a002 / c304 / c305
    =================================================================== */
@@ -404,6 +414,7 @@ const Fridge = (()=>{
 
   let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
   let busy=Promise.resolve(), lastStatus=null, lastPayload=null, settings=null, snapshot=null, sizeLogged=false;
+  let byteChangeAt=null; // per-index ms timestamp of last observed change, for on-site liveness debugging
 
   function buildFrame(payload){
     const len=payload.length+2, body=[0xFE,0xFE,len,...payload];
@@ -532,7 +543,7 @@ const Fridge = (()=>{
       setState('','Fridge disconnected');
     }
   }
-  function onDisc(){ connected=false; if(poll){clearInterval(poll);poll=null;} writeCh=notifyCh=null; setState('','Fridge disconnected'); enable(false); log('er','Fridge disconnected.'); }
+  function onDisc(){ connected=false; if(poll){clearInterval(poll);poll=null;} writeCh=notifyCh=null; byteChangeAt=null; setState('','Fridge disconnected'); enable(false); log('er','Fridge disconnected.'); }
   function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
   /* commands */
@@ -592,11 +603,15 @@ const Fridge = (()=>{
   function renderBytes(){
     const p=lastPayload; if(!p) return;
     const tb=$('f-byte-table').querySelector('tbody'); tb.innerHTML='';
-    const ri=document.createElement('tr'), rh=document.createElement('tr'), rd=document.createElement('tr');
-    ri.innerHTML='<th>idx</th>'; rh.innerHTML='<th>hex</th>'; rd.innerHTML='<th>s8</th>';
+    const ri=document.createElement('tr'), rh=document.createElement('tr'), rd=document.createElement('tr'), ra=document.createElement('tr');
+    ri.innerHTML='<th>idx</th>'; rh.innerHTML='<th>hex</th>'; rd.innerHTML='<th>s8</th>'; ra.innerHTML='<th>last Δ</th>';
+    const now=Date.now();
     for(let i=0;i<p.length;i++){ const ch=snapshot&&snapshot[i]!==p[i]?' class="changed"':'';
-      ri.innerHTML+=`<th>${i}</th>`; rh.innerHTML+=`<td${ch}>${p[i].toString(16).padStart(2,'0')}</td>`; rd.innerHTML+=`<td${ch}>${s8(p[i])}</td>`; }
-    tb.append(ri,rh,rd);
+      ri.innerHTML+=`<th>${i}</th>`; rh.innerHTML+=`<td${ch}>${p[i].toString(16).padStart(2,'0')}</td>`; rd.innerHTML+=`<td${ch}>${s8(p[i])}</td>`;
+      const at=byteChangeAt&&byteChangeAt[i]; const age=at?Math.round((now-at)/1000)+'s':'never';
+      ra.innerHTML+=`<td>${age}</td>`;
+    }
+    tb.append(ri,rh,rd,ra);
   }
   function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',Number(b.dataset.v)===Number(v))); }
 
@@ -617,7 +632,7 @@ const Power = (()=>{
   const READ_SETTINGS=[0x11,0x03,0x00,0x00,0x00,0x50];   // +CRC -> once on connect
   // Allowed write values (firmware does NOT validate — enforce here).
   const SAFE={20:{min:1,max:20},24:[0,1],25:[0,1],26:[0,1],27:[0,1,2,3],57:[0,1],
-              59:[0,180,300,600,1800],60:[0,480,960,1440],61:[0,480,960,1440],62:[0,3,5,10,30],
+              59:[0,180,300,600,1800],60:[0,480,960,1440],61:[0,480,960,1440],62:[0,180,300,600,1800],
               63:{min:0,max:1440},66:{min:0,max:1000},67:{min:0,max:1000},68:[5,10,30,60,480],13:[1,2,3,4,5],64:[1]};
 
   let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
@@ -700,18 +715,25 @@ const Power = (()=>{
   }
   function enable(on){
     $('p-control-card').classList.toggle('disabled-overlay',!on);
-    ['p-ac','p-dc','p-usb','p-silent','p-charge-limit','p-discharge-limit','p-ac-standby','p-dc-standby','p-sys-standby'].forEach(i=>$(i).disabled=!on);
+    ['p-ac','p-dc','p-usb','p-silent','p-charge-limit','p-discharge-limit','p-ac-standby','p-dc-standby','p-usb-standby','p-screen-timeout','p-sys-standby'].forEach(i=>$(i).disabled=!on);
     document.querySelectorAll('#p-led button,#p-charge button').forEach(b=>b.disabled=!on);
   }
   function updateUI(){
     const soc=getReg(56)/10, inW=getReg(6)||(getReg(3)+getReg(4)), outW=getReg(20)||getReg(39);
-    const flags=getReg(41), err=getReg(8), sf=getReg(48);
+    const flags=getReg(41), err=getReg(8), prot=getReg(42), sf=getReg(48);
     $('p-soc').textContent=soc.toFixed(0); $('p-in').textContent=inW+'W'; $('p-out').textContent=outW+'W';
     $('p-ring').style.strokeDashoffset=(2*Math.PI*64)*(1-clamp(soc,0,100)/100);
-    const charging=inW>0 && inW>=outW;
+    // Derive charging from reg 48's own flag rather than an inW/outW heuristic, so this
+    // agrees with the "Charging"/"Standby" state text below instead of drifting from it
+    // (e.g. both idle at 0 W previously still reported "Empty in …").
+    const charging=!!(sf&0x8000);
     const mins=charging?getReg(58):getReg(59);
     $('p-time').textContent=mins>0?`${charging?'Full in':'Empty in'} ${Math.floor(mins/60)}h ${mins%60}m`:'';
-    let state= err===79?'Protection': err===78?'Inverter fault': err>0?('Error '+err): (sf&0x8000)?'Charging':(sf&0x4000)?'Standby':(outW>0?'Discharging':'Idle');
+    // Reg 8 is only a fault at 78/79 — other non-zero values occur during normal
+    // operation and must not be surfaced as errors (see fossibot-bluetooth PROTOCOL.md §6).
+    // Reg 79 splits into hardware failure vs. temp/safety protection via reg42 bits 13-14.
+    const criticalFault=(prot&0x6000)>0;
+    let state= err===78?'Inverter fault': err===79?(criticalFault?'System failure':'Temp/safety protection'): (sf&0x8000)?'Charging':(sf&0x4000)?'Standby':(outW>0?'Discharging':'Idle');
     $('p-state').textContent=state;
     // outputs (live, from reg41 bits)
     $('p-ac').checked=!!(flags&2048); $('p-dc').checked=!!(flags&1024); $('p-usb').checked=!!(flags&512);
@@ -724,7 +746,7 @@ const Power = (()=>{
   }
   function renderRegs(){
     const tb=$('p-reg-table').querySelector('tbody'); tb.innerHTML='';
-    const named={3:'AC in W',4:'DC in W',6:'In W',8:'Error',13:'Chg rate',20:'Out W',27:'LED',41:'Flags',42:'Prot',48:'Status',54:'Cap',56:'SOC',57:'Silent',58:'ToFull',59:'ToEmpty',66:'DischLim',67:'ChgLim'};
+    const named={3:'AC in W',4:'DC in W',6:'In W',8:'Error',13:'Chg rate',20:'Out W',27:'LED',41:'Flags',42:'Prot',48:'Status',54:'Cap',56:'SOC',57:'Silent',58:'ToFull',59:'ToEmpty',62:'ScreenTO',66:'DischLim',67:'ChgLim'};
     for(let i=0;i<90;i+=2){
       const tr=document.createElement('tr');
       for(const j of [i,i+1]){ if(j>=90) break;
@@ -748,6 +770,7 @@ $('f-R-up').onclick   =()=>Fridge.stepRight(1);
 $('f-R-down').onclick =()=>Fridge.stepRight(-1);
 $('f-sw-power').onclick  =()=>{ const p=$('f-sw-power').textContent.includes('ON')?0:1; Fridge.setByte(1,p); };
 $('f-sw-lock').onchange   =e=>Fridge.setByte(0,e.target.checked?1:0);
+// Run mode (status idx2): 0 = Max, 1 = Eco.
 document.querySelectorAll('#f-seg-zone button').forEach(b=>b.onclick=()=>Fridge.setByte(2,Number(b.dataset.v)));
 document.querySelectorAll('#f-seg-batt button').forEach(b=>b.onclick=()=>Fridge.setByte(3,Number(b.dataset.v)));
 document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setUnit(b.dataset.v==='1'));
@@ -770,6 +793,8 @@ $('p-discharge-limit').oninput=e=>$('p-dl-val').textContent=e.target.value+'%';
 $('p-discharge-limit').onchange=e=>Power.setReg(66,Number(e.target.value)*10);
 $('p-ac-standby').onchange=e=>Power.setReg(60,Number(e.target.value));
 $('p-dc-standby').onchange=e=>Power.setReg(61,Number(e.target.value));
+$('p-usb-standby').onchange=e=>Power.setReg(59,Number(e.target.value));
+$('p-screen-timeout').onchange=e=>Power.setReg(62,Number(e.target.value));
 $('p-sys-standby').onchange=e=>{ if(e.target.value) Power.setReg(68,Number(e.target.value)); };
 $('p-connect').onclick=()=>Power.isConnected()?Power.disconnect():Power.connect(false);
 $('h-power-btn').onclick=()=>Power.isConnected()?Power.disconnect():Power.connect(false);
@@ -808,8 +833,52 @@ function setTheme(t){ document.body.dataset.theme=t; localStorage.setItem('van-t
 $('theme-btn').onclick=()=>setTheme(THEMES[(THEMES.indexOf(document.body.dataset.theme)+1)%THEMES.length]);
 setTheme(localStorage.getItem('van-theme')||'ocean');
 
-// Service worker
+// Service worker — enables offline use and (with the manifest) makes the app installable.
 if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+
+/* ---------- Install as a PWA (Android / desktop Chrome / Edge) ----------
+   Chrome fires `beforeinstallprompt` when the app meets the install criteria
+   (served over https or localhost, has a manifest + service worker + icons).
+   We stash the event and reveal our own install affordances, then trigger the
+   native prompt on tap. Everything here is local — no network calls. */
+let deferredPrompt=null;
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: minimal-ui)').matches||window.navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+
+function showInstallUI(show){
+  $('install-btn').style.display = show?'grid':'none';
+  $('install-card').style.display = show?'block':'none';
+}
+
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();            // stop Chrome's default mini-infobar…
+  deferredPrompt=e;              // …so we can prompt on the user's tap instead.
+  if(!isStandalone()){ showInstallUI(true); log('in','App is installable — tap ⬇️ to add to your home screen.'); }
+});
+
+async function doInstall(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  log('in','Install prompt: '+outcome);
+  deferredPrompt=null;
+  if(outcome==='accepted') showInstallUI(false);
+}
+$('install-btn').onclick=doInstall;
+$('install-card-btn').onclick=doInstall;
+
+window.addEventListener('appinstalled', ()=>{ deferredPrompt=null; showInstallUI(false); log('in','App installed. You can launch it from your home screen.'); });
+
+// Already installed / launched standalone → never nag about installing.
+if(isStandalone()){
+  showInstallUI(false);
+} else if(isIOS()){
+  // iOS Safari never fires beforeinstallprompt — show manual Add-to-Home-Screen steps.
+  $('install-card').style.display='block';
+  $('install-card-btn').style.display='none';
+  $('install-ios-hint').style.display='block';
+  $('install-text').textContent='Install SmartVan to launch it full-screen and use it offline.';
+}
 </script>
 </body>
 </html>
