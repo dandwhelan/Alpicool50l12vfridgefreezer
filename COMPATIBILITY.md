@@ -20,6 +20,9 @@ Advertised BLE name usually starts with one of: **`A1-`, `AK1-`, `AK2-`, `AK3-`,
 (The unit this repo was built against advertises as `A1-FFFF11A96263` — an **Alpicool 50 L
 12 V dual-zone, LG compressor**.)
 
+> ⚠️ A **`SYZ-`** prefix signals the unrelated **SUNTEK SC-BLE / service `FFF0`** lineage
+> (see the BougeRV CRD2 entry below) — not this protocol, whatever the app store listing says.
+
 ---
 
 ## ✅ Confirmed (same app + protocol)
@@ -28,7 +31,7 @@ Advertised BLE name usually starts with one of: **`A1-`, `AK1-`, `AK2-`, `AK3-`,
 |:------|:------|
 | **Alpicool** | The OEM/original. The 50 L dual-zone here is an Alpicool. |
 | **Brass Monkey** | AU/NZ rebrand (Jaycar, Bunnings, Road Tech Marine). Same hardware + same app — confirmed by the `klightspeed/BrassMonkeyFridgeMonitor` and `johnelliott/alpicoold` projects. |
-| **BougeRV** (CR-series) | The official app store listing explicitly names BougeRV. ⚠️ *Some* BougeRV models use a different (Wancool/SECOP) compressor + app — check via the test above. |
+| **BougeRV** (CR-series) | The official app store listing explicitly names BougeRV. ⚠️ *Some* BougeRV models use a different (Wancool/SECOP) compressor + app — check via the test above. **The CRD2 V2.0 is confirmed a different lineage entirely** — see below. |
 
 ---
 
@@ -54,6 +57,14 @@ Different controllers/apps/protocols — not this `1234` stack:
 - **ICECO** (and ICECO-built **Setpower** models) — own app.
 - **ARB**, **Dometic**, **National Luna**, **Engel** — entirely different electronics.
 - **EcoFlow Glacier**, **Anker** etc. — their own ecosystems.
+- **BougeRV CRD2 V2.0** (52 QT dual-zone) — vendor app is **BougeRV**
+  (`com.caption.bougerv`), not *CAR FRIDGE FREEZER*. GATT exposes service **`FFF0`**
+  (write `FFF1`, notify `FFF4`) built on a **SUNTEK SC-BLE-1.0** module, not `1234`. The
+  protocol is plain newline-terminated **ASCII/CSV**
+  (`/SC0/4/2,1,2,+54,+44,+34,+34,2,118,2,100,1,b01`), not the `FE FE … sum16` binary frames
+  here. Advertised BLE name prefix **`SYZ-`** — since SC-BLE-1.0 is a generic module, other
+  rebadges advertising `SYZ-` likely share this same different lineage. (Reported in
+  [issue #7](https://github.com/dandwhelan/Alpicool50l12vfridgefreezer/issues/7).)
 - Any unit that pairs with a *different* branded app, or exposes generic **`ffe0/ffe1`** (HM‑10)
   rather than service `1234`.
 
