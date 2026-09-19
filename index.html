@@ -296,6 +296,8 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
         <summary>Advanced timers</summary>
         <div class="row"><div class="lab">AC standby</div><select id="p-ac-standby"><option value="0">Never</option><option value="480">8h</option><option value="960">16h</option><option value="1440">24h</option></select></div>
         <div class="row"><div class="lab">DC standby</div><select id="p-dc-standby"><option value="0">Never</option><option value="480">8h</option><option value="960">16h</option><option value="1440">24h</option></select></div>
+        <div class="row"><div class="lab">USB standby</div><select id="p-usb-standby"><option value="0">Never</option><option value="180">3m</option><option value="300">5m</option><option value="600">10m</option><option value="1800">30m</option></select></div>
+        <div class="row"><div class="lab">Screen timeout</div><select id="p-screen-timeout"><option value="0">Never</option><option value="180">3m</option><option value="300">5m</option><option value="600">10m</option><option value="1800">30m</option></select></div>
         <div class="row" style="display:block">
           <div class="lab">Whole-unit idle shutdown</div>
           <div class="dangerbox" style="margin:8px 0">⚠️ Never set this to 0 — writing 0 to register 68 has <b>permanently bricked</b> units. This control only offers safe values.</div>
@@ -637,7 +639,7 @@ const Power = (()=>{
   const READ_SETTINGS=[0x11,0x03,0x00,0x00,0x00,0x50];   // +CRC -> once on connect
   // Allowed write values (firmware does NOT validate — enforce here).
   const SAFE={20:{min:1,max:20},24:[0,1],25:[0,1],26:[0,1],27:[0,1,2,3],57:[0,1],
-              59:[0,180,300,600,1800],60:[0,480,960,1440],61:[0,480,960,1440],62:[0,3,5,10,30],
+              59:[0,180,300,600,1800],60:[0,480,960,1440],61:[0,480,960,1440],62:[0,180,300,600,1800],
               63:{min:0,max:1440},66:{min:0,max:1000},67:{min:0,max:1000},68:[5,10,30,60,480],13:[1,2,3,4,5],64:[1]};
 
   let dev=null,writeCh=null,notifyCh=null,connected=false,poll=null;
@@ -720,7 +722,7 @@ const Power = (()=>{
   }
   function enable(on){
     $('p-control-card').classList.toggle('disabled-overlay',!on);
-    ['p-ac','p-dc','p-usb','p-silent','p-charge-limit','p-discharge-limit','p-ac-standby','p-dc-standby','p-sys-standby'].forEach(i=>$(i).disabled=!on);
+    ['p-ac','p-dc','p-usb','p-silent','p-charge-limit','p-discharge-limit','p-ac-standby','p-dc-standby','p-usb-standby','p-screen-timeout','p-sys-standby'].forEach(i=>$(i).disabled=!on);
     document.querySelectorAll('#p-led button,#p-charge button').forEach(b=>b.disabled=!on);
   }
   function updateUI(){
@@ -751,7 +753,7 @@ const Power = (()=>{
   }
   function renderRegs(){
     const tb=$('p-reg-table').querySelector('tbody'); tb.innerHTML='';
-    const named={3:'AC in W',4:'DC in W',6:'In W',8:'Error',13:'Chg rate',20:'Out W',27:'LED',41:'Flags',42:'Prot',48:'Status',54:'Cap',56:'SOC',57:'Silent',58:'ToFull',59:'ToEmpty',66:'DischLim',67:'ChgLim'};
+    const named={3:'AC in W',4:'DC in W',6:'In W',8:'Error',13:'Chg rate',20:'Out W',27:'LED',41:'Flags',42:'Prot',48:'Status',54:'Cap',56:'SOC',57:'Silent',58:'ToFull',59:'ToEmpty',62:'ScreenTO',66:'DischLim',67:'ChgLim'};
     for(let i=0;i<90;i+=2){
       const tr=document.createElement('tr');
       for(const j of [i,i+1]){ if(j>=90) break;
@@ -801,6 +803,8 @@ $('p-discharge-limit').oninput=e=>$('p-dl-val').textContent=e.target.value+'%';
 $('p-discharge-limit').onchange=e=>Power.setReg(66,Number(e.target.value)*10);
 $('p-ac-standby').onchange=e=>Power.setReg(60,Number(e.target.value));
 $('p-dc-standby').onchange=e=>Power.setReg(61,Number(e.target.value));
+$('p-usb-standby').onchange=e=>Power.setReg(59,Number(e.target.value));
+$('p-screen-timeout').onchange=e=>Power.setReg(62,Number(e.target.value));
 $('p-sys-standby').onchange=e=>{ if(e.target.value) Power.setReg(68,Number(e.target.value)); };
 $('p-connect').onclick=()=>Power.isConnected()?Power.disconnect():Power.connect(false);
 $('h-power-btn').onclick=()=>Power.isConnected()?Power.disconnect():Power.connect(false);
