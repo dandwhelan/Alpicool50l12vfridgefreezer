@@ -231,14 +231,14 @@ select{background:var(--bg-input); color:var(--text-main); border:1px solid var(
     <div class="card">
       <h2 style="font-size:16px; margin-bottom:20px"><button class="icon-btn" id="f-settings-back" style="display:inline-grid; width:30px; height:30px; margin-right:8px; border:none; background:transparent; font-size:16px">◀</button> Fridge Settings</h2>
       <div class="row"><div class="lab">Battery protection</div><div class="seg" id="f-seg-batt"><button data-v="0">Low</button><button data-v="1">Mid</button><button data-v="2">High</button></div></div>
-      <div class="row"><div class="lab">Temperature unit</div><div class="seg" id="f-seg-unit"><button data-v="1">°C</button><button data-v="2">°F</button></div></div>
+      <div class="row"><div class="lab">Temperature unit</div><div class="seg" id="f-seg-unit"><button data-v="0">°C</button><button data-v="1">°F</button></div></div>
       <div class="row"><div class="lab">Keypad lock</div><label class="switch"><input type="checkbox" id="f-sw-lock"><span class="slide"></span></label></div>
-      <div class="row"><div class="lab">Active Zone UI</div><div class="seg" id="f-seg-zone"><button data-v="0">Fridge</button><button data-v="1">Freezer</button></div></div>
+      <div class="row"><div class="lab">Run mode</div><div class="seg" id="f-seg-zone"><button data-v="0">Max</button><button data-v="1">Eco</button></div></div>
     </div>
 
     <div class="card">
       <h2>Pairing</h2>
-      <p class="muted" style="margin-top:0">If the fridge ignores commands, press its <b>SET</b> button then tap Bind within a few seconds.</p>
+      <p class="muted" style="margin-top:0">Not normally needed — status and controls work without binding. Use only if the fridge ignores commands (press its <b>SET</b> button first).</p>
       <button class="btn" id="f-bind" disabled>🔗 Bind / confirm this fridge</button>
     </div>
   </section>
@@ -420,67 +420,88 @@ const Fridge = (()=>{
     for(let i=0;i<plen;i++) p[i]=view.getUint8(4+i);
     return {cmd,payload:p,ok:sum===((hi<<8)|lo)};
   }
+  // Status layout verified from the app's decompiled fetchData() + HCI capture (see PROTOCOL.md §4).
   function parseStatus(p){
     const st={raw:p,len:p.length};
-    if(p.length>=4){ 
-      st.locked=!!p[0]; 
-      st.powered=!!p[1]; 
-      st.zoneMode=p[2]; // 0=Fridge, 1=Freezer
-      st.battSaver=p[3]; // 0=Low, 1=Mid, 2=High
-    }
-    if(p.length>=31){ 
-      st.L_target=s8(p[4]); 
-      st.L_max=s8(p[5]); 
-      st.L_min=s8(p[6]);
-      st.unit = p[12]===2?'F':'C'; 
-      st.L_current = s8(p[16]);
-      st.R_current = s8(p[17]);
-      if (st.unit === 'F') {
-         st.L_current = Math.round(st.L_current*9/5 + 32);
-         st.R_current = Math.round(st.R_current*9/5 + 32);
-      }
-      st.R_target=s8(p[18]);
-      st.R_max=s8(p[19]);
-      st.R_min=s8(p[20]);
-    }
+    if(p.length<18) return st;
+    st.locked=!!p[0]; st.powered=!!p[1];
+    st.runMode=p[2];            // 0=Max, 1=Eco
+    st.battSaver=p[3];          // 0=Low, 1=Mid, 2=High
+    st.L_target=s8(p[4]); st.L_max=s8(p[5]); st.L_min=s8(p[6]);
+    st.retDiff=s8(p[7]); st.startDelay=p[8];
+    st.unit=p[9]===1?'F':'C';
+    st.L_current=s8(p[14]);
+    st.battPct=p[15]; st.volts=p[16]+p[17]/10;
+    st.dual=p.length>=30;
+    if(st.dual){
+      st.R_target=s8(p[18]); st.R_max=s8(p[19]); st.R_min=s8(p[20]);
+      const rc=s8(p[26]); st.R_current=rc===-128?null:rc;
+      st.runningStatus=p[27]; st.model=s8(p[28]); st.hotTarget=s8(p[29]);
+    } else { st.model=1; }
     return st;
   }
+  // Rebuild the CMD 02 "set others" payload from the last status (PROTOCOL.md §5).
+  function buildSet(p, over={}){
+    const q=Uint8Array.from(p); for(const k in over) q[k]=u8(over[k]);
+    const model=s8(q[28]??1), out=[0x02];
+    for(let i=0;i<14;i++) out.push(q[i]);
+    if(model!==1){
+      for(let i=18;i<26;i++) out.push(q[i]);
+      out.push(q[29]??0, q[28]??0);
+    }
+    if(model>=9) out.push(q[27]??0,q[30]??0,q[33]??0,0,0,0,0,0,0);
+    else if(model!==1) out.push(0);
+    return out;
+  }
+  // Convert every temperature field when switching unit (mirrors app's C2F / C2FR).
+  function convertUnit(p,toF){
+    const q=Uint8Array.from(p);
+    const abs=v=>u8(toF?Math.round(s8(v)*1.8+32):Math.round((s8(v)-32)/1.8));
+    const rel=v=>u8(toF?Math.round(s8(v)*1.8):Math.round(s8(v)/1.8));
+    for(const i of [4,5,6,14,18,19,20,26,29]) if(i<q.length && !(i===26&&s8(q[i])===-128)) q[i]=abs(q[i]);
+    for(const i of [7,10,11,12,13,21,22,23,24,25]) if(i<q.length) q[i]=rel(q[i]);
+    q[9]=toF?1:0; return q;
+  }
+  // Fridge needs 20-byte writes (default MTU); it reassembles by the LEN byte.
   function send(payload){
     busy=busy.then(async ()=>{
       if(!writeCh) return;
       const f=buildFrame(payload);
-      try{ const m=await smartWrite(writeCh,f); log('tx',`F→ ${hex(f)} (${m})`); }
-      catch(e){ log('er','Fridge TX FAILED: '+e.message); }
+      try{
+        for(let i=0;i<f.length;i+=20){
+          const m=await smartWrite(writeCh,f.slice(i,i+20));
+          if(i===0) log('tx',`F→ ${hex(f)} (${m}${f.length>20?', chunked':''})`);
+        }
+      }catch(e){ log('er','Fridge TX FAILED: '+e.message); }
       await sleep(160);
     });
     return busy;
   }
+  // Notifications >20 bytes arrive in pieces: buffer until 3+LEN bytes are in.
+  let rxBuf=[];
   function onNotify(ev){
     const v=ev.target.value;
     const bytes=new Uint8Array(v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength));
     log('rx','F← '+hex(bytes));
+    rxBuf.push(...bytes);
+    for(;;){
+      while(rxBuf.length>=2 && !(rxBuf[0]===0xFE&&rxBuf[1]===0xFE)) rxBuf.shift();
+      if(rxBuf.length<3) return;
+      const total=rxBuf[2]+3; if(rxBuf.length<total) return;
+      const frame=Uint8Array.from(rxBuf.splice(0,total));
+      handleFrame(new DataView(frame.buffer));
+    }
+  }
+  function handleFrame(v){
     const f=parseFrame(v); if(!f) return;
-    if(!f.ok) log('er','  ↳ fridge checksum mismatch');
-    if(f.cmd===CMD.QUERY && f.payload.length>=4){
+    if(!f.ok){ log('er','  ↳ fridge checksum mismatch'); return; }
+    const full=(f.cmd===CMD.QUERY||f.cmd===CMD.SET||f.cmd===CMD.SET_RIGHT) && f.payload.length>=18;
+    if(full){
       lastPayload=f.payload; lastStatus=parseStatus(f.payload);
-      
-      if(f.payload.length>=31) {
-        // Reconstruct the 25-byte SET settings payload from the 31-byte STATUS payload
-        settings = new Uint8Array(25);
-        for(let i=0; i<14; i++) settings[i] = f.payload[i];
-        for(let i=0; i<8; i++)  settings[14+i] = f.payload[18+i];
-        settings[22] = f.payload[12] === 2 ? 32 : 0;
-        settings[23] = f.payload.length >= 29 ? f.payload[28] : 3;
-        settings[24] = f.payload.length >= 30 ? f.payload[29] : 0;
-        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (dual-zone detected)`); sizeLogged=true; }
-      } else {
-        // fallback to original behavior for short payloads during pairing
-        settings=f.payload.slice(0,Math.max(0,f.payload.length-4));
-        if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes (short payload, possibly waiting for bind)`); sizeLogged=true; }
-      }
+      if(!sizeLogged){ log('in',`  ↳ status payload = ${f.payload.length} bytes · ${lastStatus.dual?'dual':'single'}-zone · model ${lastStatus.model}`); sizeLogged=true; }
       updateUI(); renderBytes();
     } else {
-      log('in',`  ↳ fridge replied to cmd 0x${f.cmd.toString(16).padStart(2,'0')} ${f.ok?'(accepted)':'(bad crc)'}`);
+      log('in',`  ↳ fridge replied to cmd 0x${f.cmd.toString(16).padStart(2,'0')} (accepted)`);
     }
   }
   async function connect(all){
@@ -499,7 +520,7 @@ const Fridge = (()=>{
       notifyCh=await svc.getCharacteristic(NOTIFY);
       await notifyCh.startNotifications();
       notifyCh.addEventListener('characteristicvaluechanged',onNotify);
-      connected=true; sizeLogged=false; setState('on',dev.name||'Connected'); enable(true);
+      connected=true; sizeLogged=false; rxBuf=[]; setState('on',dev.name||'Connected'); enable(true);
       const wp=Object.entries(writeCh.properties).filter(([,v])=>v).map(([k])=>k).join(',');
       log('in','Fridge connected: '+(dev.name||'device')+' · write char ['+wp+']');
       await send([CMD.QUERY]);
@@ -515,26 +536,31 @@ const Fridge = (()=>{
   function disconnect(){ if(poll){clearInterval(poll);poll=null;} try{ if(dev&&dev.gatt.connected) dev.gatt.disconnect(); }catch(_){} onDisc(); }
 
   /* commands */
-  async function setLeftTarget(t){ 
-    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
-    settings[4] = u8(t); 
-    await send([CMD.SET_LEFT, ...settings]); 
-    await sleep(150); 
-    await send([CMD.QUERY]); 
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  async function setLeftTarget(t){
+    const st=lastStatus; if(st&&st.L_min!=null) t=clamp(t,st.L_min,st.L_max);
+    await send([CMD.SET_LEFT, u8(t)]);
+    if(lastStatus) lastStatus.L_target=t;
+    await send([CMD.QUERY]);
   }
-  async function setRightTarget(t){ 
-    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
-    settings[14] = u8(t); 
-    await send([CMD.SET_RIGHT, ...settings]); 
-    await sleep(150); 
-    await send([CMD.QUERY]); 
+  async function setRightTarget(t){
+    const st=lastStatus; if(st&&st.dual) t=clamp(t,st.R_min,st.R_max);
+    await send([CMD.SET_RIGHT, u8(t)]);
+    if(lastStatus) lastStatus.R_target=t;
+    await send([CMD.QUERY]);
   }
-  async function setByte(idx,val){ 
-    if(!settings){ log('er','Fridge: no cached settings yet'); return; } 
-    settings[idx] = u8(val); 
-    await send([CMD.SET, ...settings]); 
-    await sleep(150); 
-    await send([CMD.QUERY]); 
+  const stepLeft =d=>lastStatus&&setLeftTarget(lastStatus.L_target+d);
+  const stepRight=d=>lastStatus&&lastStatus.dual&&setRightTarget(lastStatus.R_target+d);
+  // idx: 0 locked · 1 powered · 2 runMode · 3 batSaver (status/settings share these offsets)
+  async function setByte(idx,val){
+    if(!lastPayload){ log('er','Fridge: no status yet'); return; }
+    await send(buildSet(lastPayload,{[idx]:val}));
+    await send([CMD.QUERY]);
+  }
+  async function setUnit(toF){
+    if(!lastPayload){ log('er','Fridge: no status yet'); return; }
+    await send(buildSet(convertUnit(lastPayload,toF)));
+    await send([CMD.QUERY]);
   }
 
   /* UI */
@@ -560,8 +586,8 @@ const Fridge = (()=>{
     $('f-sw-power').textContent=st.powered?'Power ON':'Power OFF'; 
     $('f-sw-power').style.color=st.powered?'var(--good)':'var(--text-main)';
     $('f-sw-lock').checked=!!st.locked;
-    setSeg('f-seg-zone',st.zoneMode); setSeg('f-seg-batt',st.battSaver); setSeg('f-seg-unit',st.unit==='F'?2:1);
-    $('h-fridge-meta').textContent=`Alpicool · ${st.L_current??'?'}° / ${st.R_current??'?'}°`;
+    setSeg('f-seg-zone',st.runMode); setSeg('f-seg-batt',st.battSaver); setSeg('f-seg-unit',st.unit==='F'?1:0);
+    $('h-fridge-meta').textContent=`Alpicool · ${st.L_current??'?'}° / ${st.R_current??'?'}° · ${st.volts!=null?st.volts.toFixed(1)+' V':''}`;
   }
   function renderBytes(){
     const p=lastPayload; if(!p) return;
@@ -574,7 +600,7 @@ const Fridge = (()=>{
   }
   function setSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('active',Number(b.dataset.v)===Number(v))); }
 
-  return { connect, disconnect, isConnected:()=>connected, setLeftTarget, setRightTarget, setByte,
+  return { connect, disconnect, isConnected:()=>connected, setLeftTarget, setRightTarget, stepLeft, stepRight, setByte, setUnit,
            bind:()=>send([CMD.BIND]), sendRaw:bytes=>send(bytes), snapshot:()=>{ if(lastPayload){snapshot=Uint8Array.from(lastPayload); renderBytes(); log('in','Fridge snapshot taken.');} },
            clearSnap:()=>{ snapshot=null; renderBytes(); }, hasStatus:()=>!!lastStatus };
 })();
@@ -716,15 +742,15 @@ const Power = (()=>{
    Wire up UI
    =================================================================== */
 // Fridge controls
-$('f-L-up').onclick   =()=>{ const t=Number($('f-L-target').textContent)+1; $('f-L-target').textContent=t; Fridge.setLeftTarget(t); };
-$('f-L-down').onclick =()=>{ const t=Number($('f-L-target').textContent)-1; $('f-L-target').textContent=t; Fridge.setLeftTarget(t); };
-$('f-R-up').onclick   =()=>{ const t=Number($('f-R-target').textContent)+1; $('f-R-target').textContent=t; Fridge.setRightTarget(t); };
-$('f-R-down').onclick =()=>{ const t=Number($('f-R-target').textContent)-1; $('f-R-target').textContent=t; Fridge.setRightTarget(t); };
+$('f-L-up').onclick   =()=>Fridge.stepLeft(1);
+$('f-L-down').onclick =()=>Fridge.stepLeft(-1);
+$('f-R-up').onclick   =()=>Fridge.stepRight(1);
+$('f-R-down').onclick =()=>Fridge.stepRight(-1);
 $('f-sw-power').onclick  =()=>{ const p=$('f-sw-power').textContent.includes('ON')?0:1; Fridge.setByte(1,p); };
 $('f-sw-lock').onchange   =e=>Fridge.setByte(0,e.target.checked?1:0);
 document.querySelectorAll('#f-seg-zone button').forEach(b=>b.onclick=()=>Fridge.setByte(2,Number(b.dataset.v)));
 document.querySelectorAll('#f-seg-batt button').forEach(b=>b.onclick=()=>Fridge.setByte(3,Number(b.dataset.v)));
-document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setByte(12,Number(b.dataset.v))); // unit byte is p[12] for dual zone
+document.querySelectorAll('#f-seg-unit button').forEach(b=>b.onclick=()=>Fridge.setUnit(b.dataset.v==='1'));
 $('f-bind').onclick=()=>Fridge.bind();
 $('f-connect').onclick=()=>Fridge.isConnected()?Fridge.disconnect():Fridge.connect(false);
 $('h-fridge-btn').onclick=()=>Fridge.isConnected()?Fridge.disconnect():Fridge.connect(false);
